@@ -4,3 +4,5 @@ Pkg.activate(".")
 Pkg.instantiate()
 
 using Optim
+
+#Parameters (so far hard-coded here)
