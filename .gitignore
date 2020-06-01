@@ -4,5 +4,5 @@
 deps/deps.jl
 Manifest.toml
 
-#do not keep track of results (simulations etc.)
+#do not keep track of results to save space
 results/
