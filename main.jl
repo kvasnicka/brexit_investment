@@ -1,17 +1,17 @@
 #=
 This is the main program file for the Brexit investment paper.
 
-Use: 'julia --parfile parameterfile' runs the program with parameters contained in
-file './parameters/parameterfile'. File parameters/example.jl is an example
+Use: 'julia --parfile parameterfile' runs the program with parameters contained
+in file './parameters/parameterfile'. File parameters/example.jl is an example
 parameter file, used by the command 'julia main.jl --parfile example.jl'
 
 The role of each parameter is described in module BrexDefs (in BrexDefs.jl),
 in the definition of struct pars, together with their default values
 (these are used when the program is called without arguments).
 
-The parameters describe not only the economic environment, but also what the program
-should do (for example solve the model or simulate only), and various parameters related to
-the solution algorithm.
+The parameters describe not only the economic environment, but also what the
+program should do (for example solve the model or simulate only), and various
+parameters related to the solution algorithm.
 =#
 
 #Activate project environment and install all dependent packages.
@@ -28,6 +28,10 @@ N_th = Threads.nthreads()
 #Include file containing module BrexDefs (definition of data types) and load it
 include("./src/brexDefs.jl")
 using .BrexDefs
+
+#Include file containing module BrexPar (parallelisation tools) and load it
+include("./src/brexPar.jl")
+using .BrexPar
 
 #Get command line arguments, save them in parsed_args named tuple (global variable)
 #parfile is the name of the parameter file
@@ -59,7 +63,6 @@ stages:
 
 (0) Initialise variables containing output
 
-
 (1) Compute stationary equilibria for the initial state (pre-referendum) and
 each of the long-run post-Brexit states.
 
@@ -68,25 +71,3 @@ each of the long-run post-Brexit states.
 (3) Compute various statistics, plot results.
 
 =#
-
-
-##### (1) Computing stationary equilibria ############
-
-#What do we need here? Data type in which we store the stationary equilibria.
-#Stationary equilibrium:
-
-#Value function (and maybe policy function) of each firm, stationary distribution approximated
-#by a histogram (at least in baseline)
-
-#Do we want to store the value function as a vector, or as a multi-dimensional array?
-#Probably the latter, and translate index i into a 4-d or whatever d array...
-#
-#Also make sure it is consistent with interpolate...
-
-#
-
-#So we need to decide how to store this...
-
-##### (2) Computing transition paths ############
-
-##### (3) Computing statistics, plotting, saving results ############
