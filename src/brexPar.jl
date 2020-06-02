@@ -1,10 +1,9 @@
 #=
-This file contains module brexPar, which exports functions used for parallelisation.
+This file contains module brexPar.jl, which exports functions used for parallelisation.
 =#
-module brexPar.jl
+module brexPar
 
 export V_ind_unfold
-
 
 #Function V_ind_unfold takes the one-dimensional (folded) index (ind) and unfolds it into index for capital and shock in the firms' value function problem.
 #This is returned as a 2-dimensional array
@@ -17,5 +16,6 @@ function V_ind_unfold(ind,N_k,N_z)
 
     return [i_k,i_z]
 end
+
 
 end

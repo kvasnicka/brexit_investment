@@ -3,7 +3,7 @@ File BrexDefs.jl contains module brexDefs, which is the module defining data
 types used in the project
 =#
 
-module BrexDefs
+module brexDefs
 #This module file contains definitions of data structures used in the project
 using Parameters
 
@@ -33,6 +33,10 @@ the parameters into variables for direct access using for example
 
     ############### Firms ############################
     #Production function parameters
+
+    #shock process (discrete Markov chain)
+    N_z = 9 #realisations of shock process
+
 
     ############## Shocks ############################
 
@@ -68,7 +72,6 @@ the parameters into variables for direct access using for example
     #(1,1+VFI_howard_c,1+2*VFI_howard_c,...)
 
 end
-
 
 
 end

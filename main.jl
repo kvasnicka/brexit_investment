@@ -22,16 +22,25 @@ Pkg.instantiate()
 
 #Load necessary packages
 using Optim, Parameters
-#using Parameters
+using .Threads #so we don't have to write Threads.@threads every time
 N_th = Threads.nthreads()
+#=
+#Example use of multi-threading
+(assuming that we have initialised the paramaters struct par):
+cycle over all elements of the value function, print out indices.
+@threads for ind = 1:par.N_k*par.N_z
+    print(V_ind_unfold(ind,par.N_k,par.N_z))
+end
+=#
+
 
 #Include file containing module BrexDefs (definition of data types) and load it
 include("./src/brexDefs.jl")
-using .BrexDefs
+using .brexDefs
 
 #Include file containing module BrexPar (parallelisation tools) and load it
 include("./src/brexPar.jl")
-using .BrexPar
+using .brexPar
 
 #Get command line arguments, save them in parsed_args named tuple (global variable)
 #parfile is the name of the parameter file
@@ -57,7 +66,7 @@ else
 end
 
 #####################################################
-#=
+#=========================
 The main body of the program follows. The algorithm proceeds in the following
 stages:
 
