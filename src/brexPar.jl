@@ -3,19 +3,27 @@ This file contains module brexPar.jl, which exports functions used for paralleli
 =#
 module brexPar
 
-export V_ind_unfold
+#In the past this module contained manual functions for transforming linear indices into Cartesian indices.
+#However, this was redundant because these functions are directly implemented in Julia.
+#There are a lot of other advantages - see https://julialang.org/blog/2016/02/iteration/
 
-#Function V_ind_unfold takes the one-dimensional (folded) index (ind) and unfolds it into index for capital and shock in the firms' value function problem.
-#This is returned as a 2-dimensional array
-#Note: This is for the start-of-period value function V(k,z;agg. state).
-function V_ind_unfold(ind,N_k,N_z)
-    #Index of capital grid point
-    i_k = convert(Int, ceil(ind/N_z));
-    #Index for capital
-    i_z = convert(Int, floor(mod(ind-0.05, N_z))+1);
+#=
+We can for example create an iterator:
+V_ind = CartesianIndices((1:N,1:N)).
 
-    return [i_k,i_z]
+#This takes minimal storage space so it's no issue creating an iterator for a huge matrix.
+
+Then we can just loop
+for i in eachindex(ValueFunction)
+    V_ind[i] #this contains Cartesian index corresponding to an element of the value function
+
+    V_ind[i][j] #index for j-th state
+
 end
 
+Then V_ind[i] will return Cartesian index,and
+=#
+
+#In a future release this module may be removed, or it may create iterators (globally available everywhere)
 
 end

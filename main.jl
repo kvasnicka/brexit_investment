@@ -24,15 +24,6 @@ Pkg.instantiate()
 using Optim, Parameters
 using .Threads #so we don't have to write Threads.@threads every time
 N_th = Threads.nthreads()
-#=
-#Example use of multi-threading
-(assuming that we have initialised the paramaters struct par):
-cycle over all elements of the value function, print out indices.
-@threads for ind = 1:par.N_k*par.N_z
-    print(V_ind_unfold(ind,par.N_k,par.N_z))
-end
-=#
-
 
 #Include file containing module BrexDefs (definition of data types) and load it
 include("./src/brexDefs.jl")
