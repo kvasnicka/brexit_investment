@@ -20,12 +20,15 @@ Then we can access the values by par.β or par.σ directly. We can also unpack
 the parameters into variables for direct access using for example
 α,β = @unpack par
 
+
+!!! Declare all fields as a concrete type (for JIT performance)
+For example Int64, not Integer.
  =#
 
 @with_kw struct pars
     ################ Households ##########################
     #Utility function (CRRA, if σ = 1 it is log)
-    σ = 1
+    σ::Float64 = 1
     u = σ == 1 ? x -> log(x) : x -> (x^(1 - σ) - 1) / (1 - σ)
 
     #discount factor
