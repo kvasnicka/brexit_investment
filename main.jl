@@ -21,7 +21,7 @@ Pkg.activate(".")
 Pkg.instantiate()
 
 #Load necessary packages
-using Optim, Parameters
+using Optim, Parameters, QuantEcon
 using .Threads #so we don't have to write Threads.@threads every time
 N_th = Threads.nthreads()
 
@@ -57,11 +57,11 @@ else
 end
 
 #####################################################
-#=========================
+#=
 The main body of the program follows. The algorithm proceeds in the following
 stages:
 
-(0) Initialise variables containing output
+(0) Prep work. Generate objects used throughout such as objects for storing output.
 
 (1) Compute stationary equilibria for the initial state (pre-referendum) and
 each of the long-run post-Brexit states.
@@ -71,3 +71,8 @@ each of the long-run post-Brexit states.
 (3) Compute various statistics, plot results.
 
 =#
+
+#(0) Prep work
+
+
+#(1) Computation of stationary equilibria
