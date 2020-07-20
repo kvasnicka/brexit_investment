@@ -23,7 +23,7 @@ the parameters into variables for direct access using for example
 α,β = @unpack par
 
 #Need to be careful with abstract types. For example TFL is abstract float. But Integer is NOT a subtype of AbstractFloat, so if we for example use k_min::TFL = 1 we get an error because we are trying to assign Int64 constant to a type which does not contain integers.
-Later on - try to replace AbstractFloat with something more general like Real (more robust but potentially performance could suffer due to JIT issues)
+Later on - can replace AbstractFloat with something more general like Real (more robust but potentially performance could suffer due to JIT issues), or manually perform conversions.
  =#
 
 @with_kw struct pars{TFL<:AbstractFloat,TINT<:Integer}
