@@ -22,19 +22,19 @@ Then we can access the values by par.β or par.σ directly. We can also unpack
 the parameters into variables for direct access using for example
 α,β = @unpack par
 
-
-!!! Declare all fields as a concrete type (for JIT performance)
-For example Int64, not Integer.
+#Need to be careful with abstract types. For example TFL is abstract float. But Integer is NOT a subtype of AbstractFloat, so if we for example use k_min::TFL = 1 we get an error because we are trying to assign Int64 constant to a type which does not contain integers.
+Later on - try to replace AbstractFloat with something more general like Real (more robust but potentially performance could suffer due to JIT issues)
  =#
 
-@with_kw struct pars
+@with_kw struct pars{TFL<:AbstractFloat,TINT<:Integer}
+
     ################ Households ##########################
     #Utility function (CRRA, if σ = 1 it is log)
-    σ::Float64 = 1
-    u = σ == 1 ? x -> log(x) : x -> (x^(1 - σ) - 1) / (1 - σ)
+    σ::TFL = 1.0
+    u = σ == 1.0 ? x -> log(x) : x -> (x^(1 - σ) - 1) / (1 - σ)
 
     #discount factor
-    β::Float64 = 0.95
+    β::TFL = 0.95
 
     ############### Firms ############################
     #Production function parameters
@@ -49,9 +49,9 @@ For example Int64, not Integer.
 
     ############## Solution algorithm parameters ###############
     #Grid for capital in individual firm's problem
-    N_k::Int32 = 100
-    k_min::Float64 = 0.01 #should be > 0 (for stability)
-    k_max::Float64 = 20 #needs to be checked ex-post
+    N_k::TINT = 100
+    k_min::TFL = 0.01 #should be > 0 (for stability)
+    k_max::TFL = 20.0 #needs to be checked ex-post
 
     #Grid for capital of individual firm
     k_gr::StepRangeLen = range(k_min,k_max,length = N_k)
@@ -59,15 +59,15 @@ For example Int64, not Integer.
 
     #Number of capital grid points in the histogram of firm's distribution.
     #The same grid boundaries as in the individual firms' problem are used, (finer grid can be a good idea)
-    N_kh::Int32 = N_k
+    N_kh::TINT = N_k
     k_gr_hist::StepRangeLen = range(k_min,k_max,length = N_kh)
 
     #Productivity shock process is either AR(1) approximated by Tauchen
-    N_z::Int32 = 9 #number of shock realisations in approximation
-    AR1_μ::Float64 = 1.0 #AR(1) mean
-    AR1_ρ::Float64 = 0.5 #AR(1) autocorrelation
-    AR1_σ::Float64 = 0.1 #std deviation of innovation
-    AR1_stdev::Float64 = 2 #number of standard deviations to be covered by the grid
+    N_z::TINT = 9 #number of shock realisations in approximation
+    AR1_μ::TFL = 1.0 #AR(1) mean
+    AR1_ρ::TFL = 0.5 #AR(1) autocorrelation
+    AR1_σ::TFL = 0.1 #std deviation of innovation
+    AR1_stdev::TINT = 2 #number of standard deviations to be covered by the grid (has to be an integer)
 
     #shock process is a Markov chain type (defined in QuantEcon)
     shock_mc::MarkovChain = tauchen(N_z,AR1_ρ,AR1_σ,AR1_μ,AR1_stdev)
@@ -76,16 +76,15 @@ For example Int64, not Integer.
     #Tmax is the number of periods after which we assume that the model reaches
     #the new stationary distribution. An acceptable value needs to be found
     #experimentally (and depends on other parameters of the model)
-    T_max::Int32 = 100
+    T_max::TINT = 100
 
     #VFI_maxiter is the maximum number of iterations in VFI algorithm (solving the
     #individual firm's problem).
-    VFI_maxiter::Int64 = 500
+    VFI_maxiter::TINT = 500
     VFI_howard::Bool = true #if true Howard's acceleration algoritm will be used
-    VFI_howard_c::Int64 = 20 #Maximisation is performed in iterations
+    VFI_howard_c::TINT = 20 #Maximisation is performed in iterations
     #(1,1+VFI_howard_c,1+2*VFI_howard_c,...)
 
 end
-
 
 end
