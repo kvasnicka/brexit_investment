@@ -1,6 +1,5 @@
 #=
-File BrexDefs.jl contains module brexDefs, which is the module defining data
-types used in the project
+File BrexDefs.jl contains module brexDefs, which is the module defining data types used in the project
 =#
 
 module brexDefs
@@ -8,7 +7,7 @@ module brexDefs
 using Parameters #so we can use with_kw macro.
 using QuantEcon #for Markov chains
 
-export pars
+export pars,stat_equil
 
 #=
 Struct pars contains all model parameters and their default values.
@@ -33,8 +32,13 @@ Later on - can replace AbstractFloat with something more general like Real (more
     σ::TFL = 1.0
     u = σ == 1.0 ? x -> log(x) : x -> (x^(1 - σ) - 1) / (1 - σ)
 
-    #discount factor
-    β::TFL = 0.95
+    β::TFL = 0.95 #discount factor
+
+
+    τ::TFL = 0.0 #tarrif for current parametrisation
+    τ_all::Array{TFL,1} = [0.0,0.05,0.1]
+    #Tariffs for all parametrisations aggregate states
+
 
     ############### Firms ############################
     #Production function parameters
@@ -73,9 +77,7 @@ Later on - can replace AbstractFloat with something more general like Real (more
     shock_mc::MarkovChain = tauchen(N_z,AR1_ρ,AR1_σ,AR1_μ,AR1_stdev)
     #shock_mc.p is the transition matrix, shock_mc.state_values are the actual realisations.
 
-    #Tmax is the number of periods after which we assume that the model reaches
-    #the new stationary distribution. An acceptable value needs to be found
-    #experimentally (and depends on other parameters of the model)
+    #Tmax is the number of periods after which we assume that the model reaches he new stationary distribution. [assumed to be the same for all shock realisations]
     T_max::TINT = 100
 
     #VFI_maxiter is the maximum number of iterations in VFI algorithm (solving the
@@ -86,5 +88,24 @@ Later on - can replace AbstractFloat with something more general like Real (more
     #(1,1+VFI_howard_c,1+2*VFI_howard_c,...)
 
 end
+
+@with_kw mutable struct stat_equil{TFL<:AbstractFloat,TINT<:Integer}
+    N_kh::TINT #Number of grid points for capital and shock realisation, no default, must be supplied
+    N_z::TINT
+
+    #Distribution of firms (first index corresponds to each value of capital, second index corresponds to shock realisation)
+    μ::Array{TFL,2} = zeros(N_kh,N_z)
+
+    #Value function
+
+    #Policy function
+
+    #Prices
+
+
+end
+
+#To be defined:
+#mutable struct for transition paths. Will contain essentially the same objects as the mutable struct stat_equil, but with two extra indices (one for time period, and one for each realisation of the Brexit uncertainty shock [indexed 1,2,3])
 
 end
