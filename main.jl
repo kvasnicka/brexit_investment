@@ -1,35 +1,10 @@
-#=
-This is the main program file for the Brexit investment paper.
+#This is the main file. See Readme for how to run the program.
 
-Use: 'julia --parfile parameterfile' runs the program with parameters contained in file './parameters/parameterfile'.
-
-File parameters/example.jl is an example parameter file, used by the command 'julia main.jl --parfile example.jl', and is also used as a default if the program is called without specifying the parameter file name.
-
-The role of each parameter is described in module BrexDefs (in BrexDefs.jl), in the definition of struct pars, together with their default values (these are used when the program is called without arguments).
-
-=#
-
-#Activate project environment and install all dependent packages.
-#This should need to be done only once
-import Pkg
-
-#Activate and instantiate to make sure the same version of packages are used which worked during development (running without instantiate uses the currently installed version of packages which may be better but is also risky).
-Pkg.activate(".")
-Pkg.instantiate()
-
-#Load necessary packages
-using Optim, Parameters, QuantEcon
-using .Threads #so we don't have to write Threads.@threads every time
-const N_th = Threads.nthreads()
-
-#Include files containing modules and load them
-include("./src/brexDefs.jl")
-using .brexDefs
-
-#Run start-up script (see the file for details of what it saves)
-#most importantly it loads parameters from file and collects these in array par
+#Run start-up script (see the file for details of what it does)
+#It loads packages and modules used throughout the program.
+#It loads parameters from file and collects these in array par
 include("./src/startup.jl")
-
+#Some outputs are N_S (number of parametrisations/equilibria), N_th (num of threads), par (array of parameters).
 
 #####################################################
 #=
@@ -47,34 +22,33 @@ The main body of the program follows. The algorithm proceeds in the following st
 
 #(0) Prep work
 
+#Set up storage for stationary equilibria and transition paths
 
-#Create a copy of parameters for each of the realisations of Brexit (an arbitrary number of parameters can differ - in the baseline it is just tariffs τ). Store these in an array.
+#(this is just an allocation of memory, it assumes that the number of grid points etc. are the same for all parametrisations, values from par[1] are used).
 
-#(There is some unnecessary copying but it makes the code easier to generalise if we want to consider different values of more parameters than just tarrifs in different steady states. For this reason struct pars should be kept small - no large arrays etc.)
+SE = fill(stat_equil(N_kh = par[1].N_kh,N_z = par[1].N_z),N_S);
 
-#In the baseline element with index 1 is the pre-Brexit state, 2 is soft Brexit, 3 is Hard Brexit.
+#Transition paths (TP). This is a matrix of stationary equilibria struct. Calling it a stationary equilibrium is not accurate but it is essentially a path of distribution, value functions, etc. over time, where in each period we store the same objects that would be stored in a stationary equilibrium.
 
-
-
-#Construct stationary equilibria structs, which also allocated memory
-
-#change - just loop over the elements of par[i]
-#Change these: put this all in an array SE[i]
-
-#SE_eu = stat_equil(N_kh = par.N_kh,N_z = par.N_z) #EU
-#SE_soft = stat_equil(N_kh = par.N_kh,N_z = par.N_z) #soft Brexit
-#SE_hard = stat_equil(N_kh = par.N_kh,N_z = par.N_z) #hard Brexit
+#(It is assumed that all transition paths are equally long)
+TP = fill(stat_equil(N_kh = par[1].N_kh,N_z = par[1].N_z),par[1].T_max,N_S);
 
 
 #=
 To do:
-1) Array of parameters structs - generalise construction for a given number of states (using a for loop) and fix the issue with immutable structs.
+- elementary error-handling (checking parameters), and writing a message about parameter values...
 
-2)
-Transition paths
-choose the storage - probably a composite type: array of stat_equil (indices for time period and aggregate shock realisation)
-- then it should be called just equil or something else (it's a lot of objects together, not exactly aggregate state).
+- Fill in more parameters in brexDefs (from the paper)
 
-3) Fill in the remaining values in stat_equil and par struct (production function, etc.)
+- then continue with the skeleton construction.
+    - choose types for value function, policy function, etc.
+    
+- Bit for initialisation (get an initial guess of stationary equilibirum) [Later on - loading from file should be implemented].
 
- =#
+- Bit for solving for stationary equilibrium.
+
+- Then implement bit for shooting algorithm.
+
+- Analysis of results, saving data, etc.
+
+=#

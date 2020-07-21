@@ -1,19 +1,33 @@
 #=
 startup.jl is a startup script which does several things:
 
+0) Activates project environment, install packages if missing, load modules
 1) Parses command line arguments
 2) Loads parameters from given parameter file and constructs an array of parameters
-3) Displays some initial messages
+3) Displays some messages
 
 After running the script, the following variables are available:
 
-N_th::Int64 - the number of threads
-N_S::Int64 - number of aggregate states (parametrisations)
-
+const N_th::Int64 - the number of threads
+const N_S::Int64 - number of aggregate states (parametrisations)
 parfile::String - name of the parameter file
-
+par::Array{pars{Float64,Int64},1} - parameters for each steady state
 
 =#
+
+#Activate project environment and install all dependent packages.
+import Pkg
+#Activate and instantiate to make sure the same version of packages are used which worked during development (running without instantiate uses the currently installed version of packages which may be better there could be issues).
+Pkg.activate(".")
+Pkg.instantiate()
+
+#Load necessary packages
+using Optim, Parameters, QuantEcon
+using .Threads #so we don't have to write Threads.@threads every time
+
+#Include files containing modules and load them
+include("../src/brexDefs.jl")
+using .brexDefs
 
 #Get command line arguments, save them in parsed_args named tuple (global variable). Also save parfile - the name of the parameter file
 using ArgParse #for parsing command line arguments.
@@ -41,9 +55,12 @@ parsed_args = parse_args(ARGS, s)
 parfile = parsed_args["parfile"]
 
 #Intro message
-println("****** Brexit investment model ******")
-println("_____________________________________")
-println("Number of available threads: $N_th")
+const N_th = Threads.nthreads()
+println("**************************************")
+println("****** Brexit investment model *******")
+println("**************************************\n")
+
+println("Number of available threads: $N_th\n")
 if N_th == 1
     println("Consider increasing the number of threads by 'export JULIA_NUM_THREADS=#'")
 end
@@ -54,7 +71,7 @@ if length(parfile) == 0
     parfile="example.jl"
 end
 include("../parameters/$parfile") #directory above
-println("Parameters loaded from file parameters/$parfile")
+println("Parameters loaded from file parameters/$parfile\n")
 
 #Number of aggregate states of the economy/parametrisations
 const N_S = length(par_diff)
@@ -74,4 +91,17 @@ for i=1:N_S
     #parse the string as a command and evaluate
     ex1 = Meta.parse(expr)
     eval(ex1)
+
+    #perform a parameter check to detect some standard errors
+    check_par(par[i],t_brex)
 end
+
+#Print a message about parameters:
+println("*********Summary of parameters:*************")
+println("All baseline parameters (pre-Brexit):")
+@show par[1] #par[1] is the baseline (pre-Brexit)
+println("_______________________")
+println("Parameters that vary:")
+@show par_diff
+println(" ")
+println("********************************************")

@@ -7,7 +7,7 @@ module brexDefs
 using Parameters #so we can use with_kw macro.
 using QuantEcon #for Markov chains
 
-export pars,stat_equil
+export pars,stat_equil,check_par
 
 #=
 Struct pars contains all model parameters and their default values.
@@ -72,18 +72,17 @@ Later on - can replace AbstractFloat with something more general like Real (more
     shock_mc::MarkovChain = tauchen(N_z,AR1_ρ,AR1_σ,AR1_μ,AR1_stdev)
     #shock_mc.p is the transition matrix, shock_mc.state_values are the actual realisations.
 
-    #Tmax is the number of periods after which we assume that the model reaches he new stationary distribution. [assumed to be the same for all shock realisations]
+    #Tmax is the number of periods after which we assume that the model reaches the new stationary distribution. [Assumed to be the same for all shock realisations]. It is the total number of periods, not the number of periods after Brexit happens.
     T_max::TINT = 100
 
-    #VFI_maxiter is the maximum number of iterations in VFI algorithm (solving the
-    #individual firm's problem).
+    #VFI_maxiter is the maximum number of iterations in VFI algorithm (solving the individual firm's problem).
     VFI_maxiter::TINT = 500
     VFI_howard::Bool = true #if true Howard's acceleration algoritm will be used
     VFI_howard_c::TINT = 20 #Maximisation is performed in iterations
     #(1,1+VFI_howard_c,1+2*VFI_howard_c,...)
-
 end
 
+#mutable struct stat_equil contains everything that describes a stationary equilibrium: distribution of firms, prices, value and policy functions, etc.
 @with_kw mutable struct stat_equil{TFL<:AbstractFloat,TINT<:Integer}
     N_kh::TINT #Number of grid points for capital and shock realisation, no default, must be supplied
     N_z::TINT
@@ -97,10 +96,17 @@ end
 
     #Prices
 
-
 end
 
-#To be defined:
-#mutable struct for transition paths. Will contain essentially the same objects as the mutable struct stat_equil, but with two extra indices (one for time period, and one for each realisation of the Brexit uncertainty shock [indexed 1,2,3])
+#This function performs checks of parameters
+function check_par(par,t_brex)
+    if par.σ <= 0
+        error("σ must be positive")
+    end
+    if par.T_max <= t_brex
+        error("T_max must be greater than t_brex")
+    end
+end
+
 
 end

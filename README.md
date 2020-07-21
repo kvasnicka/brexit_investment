@@ -1,9 +1,15 @@
 # brexit_investment
 Code for solving the model of investment response to Brexit in SOE
 
-This is very much work in progress.
+File main.jl is the main script which solves the model, plots results, compute statistics, etc.
 
-File main.jl is the main script which will solve the model, plot results, compute statistics, etc. See the comments inside the file for details.
+Use: 'julia main.jl --parfile parameterfile' runs the program with parameters contained in file 'parameters/parameterfile'.
+
+File parameters/example.jl is an example parameter file, used by the command 'julia main.jl --parfile example.jl', and is also used as default if the program is called without specifying the parameter file.
+
+The role of each parameter is described in module BrexDefs (in BrexDefs.jl), in the definition of struct pars, together with their default values (these are used when the program is called without arguments).
+
+Other files:
 
 Folder parameters contains various parameter configurations (see file parameters/example.jl for an example parameter file).
 
@@ -12,3 +18,4 @@ Folder src contains source files for various modules. The convention is that one
 Description of various files follows:
 
 src/brexDefs.jl contains definitions of data types.
+src/startup.jl is a startup script
