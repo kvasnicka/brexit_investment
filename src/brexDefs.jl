@@ -34,15 +34,11 @@ Later on - can replace AbstractFloat with something more general like Real (more
 
     β::TFL = 0.95 #discount factor
 
-
-    τ::TFL = 0.0 #tarrif for current parametrisation
-    τ_all::Array{TFL,1} = [0.0,0.05,0.1]
-    #Tariffs for all parametrisations aggregate states
-
+    τ::TFL = 0.0 #tarrif
 
     ############### Firms ############################
     #Production function parameters
-
+    A::TFL = 1.0 #Total Factor Productivity
 
     ############## Shocks ############################
 
@@ -59,7 +55,6 @@ Later on - can replace AbstractFloat with something more general like Real (more
 
     #Grid for capital of individual firm
     k_gr::StepRangeLen = range(k_min,k_max,length = N_k)
-
 
     #Number of capital grid points in the histogram of firm's distribution.
     #The same grid boundaries as in the individual firms' problem are used, (finer grid can be a good idea)

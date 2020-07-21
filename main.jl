@@ -1,57 +1,35 @@
 #=
 This is the main program file for the Brexit investment paper.
 
-Use: 'julia --parfile parameterfile' runs the program with parameters contained
-in file './parameters/parameterfile'. File parameters/example.jl is an example
-parameter file, used by the command 'julia main.jl --parfile example.jl'
+Use: 'julia --parfile parameterfile' runs the program with parameters contained in file './parameters/parameterfile'.
 
-The role of each parameter is described in module BrexDefs (in BrexDefs.jl),
-in the definition of struct pars, together with their default values
-(these are used when the program is called without arguments).
+File parameters/example.jl is an example parameter file, used by the command 'julia main.jl --parfile example.jl', and is also used as a default if the program is called without specifying the parameter file name.
 
-The parameters describe not only the economic environment, but also what the
-program should do (for example solve the model or simulate only), and various
-parameters related to the solution algorithm.
+The role of each parameter is described in module BrexDefs (in BrexDefs.jl), in the definition of struct pars, together with their default values (these are used when the program is called without arguments).
+
 =#
 
 #Activate project environment and install all dependent packages.
 #This should need to be done only once
 import Pkg
 
-#Activate and instantiate to make sure the same version of packages are used which worked during development.
-#!!!Comment out only temporarily to save time during development
+#Activate and instantiate to make sure the same version of packages are used which worked during development (running without instantiate uses the currently installed version of packages which may be better but is also risky).
 Pkg.activate(".")
 Pkg.instantiate()
 
 #Load necessary packages
 using Optim, Parameters, QuantEcon
 using .Threads #so we don't have to write Threads.@threads every time
-N_th = Threads.nthreads()
+const N_th = Threads.nthreads()
 
-#Include file containing module BrexDefs (definition of data types) and load it
+#Include files containing modules and load them
 include("./src/brexDefs.jl")
 using .brexDefs
 
-#Get command line arguments, save them in parsed_args named tuple (global variable)
-#parfile is the name of the parameter file
-include("./src/commandLineArgs.jl")
+#Run start-up script (see the file for details of what it saves)
+#most importantly it loads parameters from file and collects these in array par
+include("./src/startup.jl")
 
-println("****** Brexit investment model ******")
-println("_____________________________________")
-println("Number of available threads: $N_th")
-if N_th == 1
-    println("Consider increasing the number of threads by 'export JULIA_NUM_THREADS=#'")
-end
-
-#Load parameters from the given file unless no file was given
-#(in this case the constructor pars() with no arguments uses default values)
-if length(parfile) == 0
-    par = pars()
-    println("Default values of parameters used.")
-else
-    include("./parameters/$parfile")
-    println("Parameters loaded from file ./parameters/$parfile")
-end
 
 #####################################################
 #=
@@ -76,21 +54,16 @@ The main body of the program follows. The algorithm proceeds in the following st
 
 #In the baseline element with index 1 is the pre-Brexit state, 2 is soft Brexit, 3 is Hard Brexit.
 
-parall = [par,par,par] #Initially a copy of the steady state
-#modify parameters for the different states - everything the same except for tarrifs.
-for i = 2:length(par.τ_all)
-    #Need to change this because of immutable structs. Either make it mutable or, better yet, use the constructor with different values of τ. But then I need to be careful to copy values of all parameters in case some of the default values were changed in the parameter file.
-
-    #parall[i].τ = par.τ_all[i]
-end
 
 
 #Construct stationary equilibria structs, which also allocated memory
 
+#change - just loop over the elements of par[i]
 #Change these: put this all in an array SE[i]
-SE_eu = stat_equil(N_kh = par.N_kh,N_z = par.N_z) #EU
-SE_soft = stat_equil(N_kh = par.N_kh,N_z = par.N_z) #soft Brexit
-SE_hard = stat_equil(N_kh = par.N_kh,N_z = par.N_z) #hard Brexit
+
+#SE_eu = stat_equil(N_kh = par.N_kh,N_z = par.N_z) #EU
+#SE_soft = stat_equil(N_kh = par.N_kh,N_z = par.N_z) #soft Brexit
+#SE_hard = stat_equil(N_kh = par.N_kh,N_z = par.N_z) #hard Brexit
 
 
 #=
