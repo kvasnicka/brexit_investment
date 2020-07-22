@@ -30,19 +30,18 @@ SE = fill(stat_equil(N_kh = par[1].N_kh,N_z = par[1].N_z),N_S);
 
 #Transition paths (TP). This is a matrix of stationary equilibria struct. Calling it a stationary equilibrium is not accurate but it is essentially a path of distribution, value functions, etc. over time, where in each period we store the same objects that would be stored in a stationary equilibrium.
 
-#(It is assumed that all transition paths are equally long)
+#(It is assumed that the length of all transition paths is the same and equal to the value in par[1].T_max)
 TP = fill(stat_equil(N_kh = par[1].N_kh,N_z = par[1].N_z),par[1].T_max,N_S);
 
 
 #=
 To do:
-- elementary error-handling (checking parameters), and writing a message about parameter values...
 
 - Fill in more parameters in brexDefs (from the paper)
 
 - then continue with the skeleton construction.
     - choose types for value function, policy function, etc.
-    
+
 - Bit for initialisation (get an initial guess of stationary equilibirum) [Later on - loading from file should be implemented].
 
 - Bit for solving for stationary equilibrium.

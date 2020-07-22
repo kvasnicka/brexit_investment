@@ -30,19 +30,31 @@ Later on - can replace AbstractFloat with something more general like Real (more
     ################ Households ##########################
     #Utility function (CRRA, if σ = 1 it is log)
     σ::TFL = 1.0
-    u = σ == 1.0 ? x -> log(x) : x -> (x^(1 - σ) - 1) / (1 - σ)
-
+    χ::TFL = 1.0 #disutility of work (linear)
     β::TFL = 0.95 #discount factor
+
+    u = σ == 1.0 ? (c,n) -> log(c) - χ*n : (c,n) -> (c^(1 - σ) - 1) / (1 - σ) - χ*n
 
     τ::TFL = 0.0 #tarrif
 
     ############### Firms ############################
     #Production function parameters
+    #Intermediate goods firms
     A::TFL = 1.0 #Total Factor Productivity
+    α::TFL = 0.3
+    ν::TFL = 0.6
+    #Production function - Cobb-Douglas with decreasing returns.
+    #A is TFP which is a constant so is not an input argument.
+    y = (z,k,n) -> A*z*k^α*n^ν
+
+    #Production of final goods
+    ϵ::TFL = 0.5 #elasticity of substitution
+    ω::TFL = 0.5
+    
 
     ############## Shocks ############################
 
-    ############## What to do #######################
+    ########## What the program should do################
     simonly::Bool = false
     #If simonly == true then the program loads a previously saved solution
     #and simulates the economy (and generates plots).
@@ -91,6 +103,7 @@ end
     μ::Array{TFL,2} = zeros(N_kh,N_z)
 
     #Value function
+
 
     #Policy function
 

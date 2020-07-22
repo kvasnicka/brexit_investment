@@ -20,12 +20,12 @@ par_comm = "β = 0.9, σ = 2.0"
 #The first state corresponds to pre-brexit state (initial stationary equilibrium)
 
 #Example: Tarrifs before Brexit are 0, in soft Brexit they are 0.05, in hard Brexit they are 0.1,
-#TFP is also affected, but no change in the baseline..
+#TFP is also possibly affected, but no change in the baseline..
 
 par_diff = [
     "τ = 0.0,A=1.0",
-    "τ = 0.05,A=0.95",
-    "τ = 0.1,A=0.9"
+    "τ = 0.05,A=1.0",
+    "τ = 0.1,A=1.0"
 ]
 
 #Probabilities for each aggregate state when Brexit is resolved.

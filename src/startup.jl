@@ -22,7 +22,7 @@ Pkg.activate(".")
 Pkg.instantiate()
 
 #Load necessary packages
-using Optim, Parameters, QuantEcon
+using Optim, Parameters, QuantEcon, BenchmarkTools
 using .Threads #so we don't have to write Threads.@threads every time
 
 #Include files containing modules and load them
