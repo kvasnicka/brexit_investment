@@ -1,10 +1,29 @@
 #This is the main file. See Readme for how to run the program.
 
+#Activate project environment and install all dependent packages.
+#(same versions as the ones used in development)
+import Pkg
+Pkg.activate(".")
+Pkg.instantiate()
+
+using Revise
+#use Revise for development only. Then we do not need to restart Julia to load updated packages and scripts, which saves a lot of time.
+#Also need to use includet instead of include.
+#For release versions either just comment this out and switch to standard includes.
+
+#Load necessary packages
+using Optim, Parameters, QuantEcon, BenchmarkTools
+using .Threads #so we don't have to write Threads.@threads every time
+
+#Load local modules from files (using includet for Revise)
+includet("./src/brexDefs.jl")
+using .brexDefs
+
 #Run start-up script (see the file for details of what it does)
-#It loads packages and modules used throughout the program.
-#It loads parameters from file and collects these in array par
-include("./src/startup.jl")
+#Most importantly it loads parameters from file and collects these in array par
 #Some outputs are N_S (number of parametrisations/equilibria), N_th (num of threads), par (array of parameters).
+includet("./src/startup.jl")
+
 
 #####################################################
 #=
@@ -36,6 +55,9 @@ TP = fill(stat_equil(N_kh = par[1].N_kh,N_z = par[1].N_z),par[1].T_max,N_S);
 
 #=
 To do:
+
+
+- Run some benchmarks for the utility and other functions... Maybe it's easier in Jupyter
 
 - Fill in more parameters in brexDefs (from the paper)
 

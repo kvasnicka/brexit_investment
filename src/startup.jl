@@ -1,7 +1,6 @@
 #=
 startup.jl is a startup script which does several things:
 
-0) Activates project environment, install packages if missing, load modules
 1) Parses command line arguments
 2) Loads parameters from given parameter file and constructs an array of parameters
 3) Displays some messages
@@ -14,20 +13,6 @@ parfile::String - name of the parameter file
 par::Array{pars{Float64,Int64},1} - parameters for each steady state
 
 =#
-
-#Activate project environment and install all dependent packages.
-import Pkg
-#Activate and instantiate to make sure the same version of packages are used which worked during development (running without instantiate uses the currently installed version of packages which may be better there could be issues).
-Pkg.activate(".")
-Pkg.instantiate()
-
-#Load necessary packages
-using Optim, Parameters, QuantEcon, BenchmarkTools
-using .Threads #so we don't have to write Threads.@threads every time
-
-#Include files containing modules and load them
-include("../src/brexDefs.jl")
-using .brexDefs
 
 #Get command line arguments, save them in parsed_args named tuple (global variable). Also save parfile - the name of the parameter file
 using ArgParse #for parsing command line arguments.

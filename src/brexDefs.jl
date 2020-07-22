@@ -50,7 +50,7 @@ Later on - can replace AbstractFloat with something more general like Real (more
     #Production of final goods
     ϵ::TFL = 0.5 #elasticity of substitution
     ω::TFL = 0.5
-    
+
 
     ############## Shocks ############################
 
@@ -118,6 +118,9 @@ function check_par(par,t_brex)
     end
     if par.T_max <= t_brex
         error("T_max must be greater than t_brex")
+    end
+    if par.k_min > par.k_max
+        error("k_min must be greater than k_max")
     end
 end
 
