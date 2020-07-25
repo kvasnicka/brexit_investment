@@ -10,21 +10,13 @@ Pkg.instantiate()
 using Optim, Parameters, QuantEcon, BenchmarkTools
 using .Threads #so we don't have to write Threads.@threads every time
 
-#Load local modules from files (using includet if Revise is loaded)
-#This is convenient during development - any changes in the modules will be reflected in the program without having to restart Julia.
-#Revise should be configured in the julia startup file (see Pkg Revise documentation for details.) If it's not loaded we use standard include.
-if isdefined(Revise,:includet)
-    includet("./src/brexDefs.jl")
-    includet("./src/brexMod.jl")
-else
-    include("./src/brexDefs.jl")
-    include("./src/brexMod.jl")
-end
-using .brexDefs
-using .brexMod
+#Import the local module brexit_investment which contains all new functions, data types, etc. used in the project
+import brexit_investment
+using brexit_investment
+
 
 #Run start-up script (see the file for details of what it does)
-#Most importantly it loads parameters from file and collects these in array par
+#Most importantly it loads parameters from file and collects these in array par.
 #Some outputs are N_S (number of parametrisations/equilibria), N_th (num of threads), par (array of parameters).
 include("./src/startup.jl")
 
@@ -40,8 +32,6 @@ The main body of the program follows. The algorithm proceeds in the following st
 (3) Compute various statistics, plot results, save results
 =#
 
-
-
 #*************(0) Prep work**********************
 
 #Set up storage for stationary equilibria and transition paths
@@ -56,7 +46,13 @@ SE = fill(stat_equil(N_kh = par[1].N_kh,N_z = par[1].N_z),N_S);
 TP = fill(stat_equil(N_kh = par[1].N_kh,N_z = par[1].N_z),par[1].T_max,N_S);
 
 #************(1) Stationary equilibrium ***************
+#Compute stationary equilibria for each set of parameters.
 
+println("Computing Stationary Equilibria...\n")
+for i=1:N_S
+    #SE[i] is initial guess
+    SE[i] = SE_compute(par,SE[i])
+end
 
 #************(2) Transition paths************************
 

@@ -1,13 +1,6 @@
 #=
-File BrexDefs.jl contains module brexDefs, which is the module defining data types used in the project
+BrexDefs.jl contains data types used in the project, and some functions working on the types such as checking parameters
 =#
-
-module brexDefs
-#This module file contains definitions of data structures used in the project
-using Parameters #so we can use with_kw macro.
-using QuantEcon #for Markov chains
-
-export pars,stat_equil,check_par
 
 
 #=
@@ -142,6 +135,4 @@ function check_par(par,N_S)
     if length(par.PS) != N_S
         error("Parameter PS and parr_diff set in parameter file must have the same length")
     end
-end
-
 end

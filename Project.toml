@@ -1,3 +1,8 @@
+name = "brexit_investment"
+uuid = "8d3463a0-d74b-4d74-89da-b5bfc2910168"
+authors = ["jan <j.kvasnicka@post.cz>"]
+version = "0.1.0"
+
 [deps]
 ArgParse = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
