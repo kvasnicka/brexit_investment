@@ -9,6 +9,7 @@ using QuantEcon #for Markov chains
 
 export pars,stat_equil,check_par
 
+
 #=
 Struct pars contains all model parameters and their default values.
 It also includes other objects which are pre-computed at the outset depending on the value of various parameters (for example grids, Markov chains, ...)
@@ -58,8 +59,25 @@ the parameters into variables for direct access using for example
      ϵ::TF = 0.5 #elasticity of substitution
      ω::TF = 0.5
 
+     #To be added (check with benchmarking if pre-computing terms makes any difference - if yes, pre-compute some of them).
+
 
      ############## Shocks ############################
+     #Idiosyncratic productivity shock
+     #Productivity shock process is either AR(1) approximated by Tauchen
+     N_z::TI = 9 #number of shock realisations in approximation
+     AR1_μ::TF = 1.0 #AR(1) mean
+     AR1_ρ::TF = 0.5 #AR(1) autocorrelation
+     AR1_σ::TF = 0.1 #std deviation of innovation
+     AR1_stdev::TI = 2 #number of standard deviations to be covered by the grid (has to be an integer)
+
+     #shock process is a Markov chain type (defined in QuantEcon)
+     shock_mc::MarkovChain = tauchen(N_z,AR1_ρ,AR1_σ,AR1_μ,AR1_stdev)
+     #shock_mc.p is the transition matrix, shock_mc.state_values are the actual realisations.
+
+     #Aggregate shock
+     tb::TI = 3 #period when Brexit happens (default = 3)
+     PS::Array{TF,1} = [0.0,0.5,0.5] #Probability of each Brexit outcome (aggregate shock S realisation)
 
      ########## What the program should do################
      simonly::Bool = false
@@ -80,18 +98,9 @@ the parameters into variables for direct access using for example
      N_kh::TI = N_k
      k_gr_hist::StepRangeLen = range(k_min,k_max,length = N_kh)
 
-     #Productivity shock process is either AR(1) approximated by Tauchen
-     N_z::TI = 9 #number of shock realisations in approximation
-     AR1_μ::TF = 1.0 #AR(1) mean
-     AR1_ρ::TF = 0.5 #AR(1) autocorrelation
-     AR1_σ::TF = 0.1 #std deviation of innovation
-     AR1_stdev::TI = 2 #number of standard deviations to be covered by the grid (has to be an integer)
 
-     #shock process is a Markov chain type (defined in QuantEcon)
-     shock_mc::MarkovChain = tauchen(N_z,AR1_ρ,AR1_σ,AR1_μ,AR1_stdev)
-     #shock_mc.p is the transition matrix, shock_mc.state_values are the actual realisations.
 
-     #Tmax is the number of periods after which we assume that the model reaches the new stationary distribution. [Assumed to be the same for all shock realisations]. It is the total number of periods, not the number of periods after Brexit happens.
+     #Tmax is the number of periods after which we assume that the model reaches the new stationary distribution. It is the total number of periods, not the number of periods after Brexit happens.
      T_max::TI = 100
 
      #VFI_maxiter is the maximum number of iterations in VFI algorithm (solving the individual firm's problem).
@@ -102,34 +111,37 @@ the parameters into variables for direct access using for example
  end
 
 #mutable struct stat_equil contains everything that describes a stationary equilibrium: distribution of firms, prices, value and policy functions, etc.
-@with_kw mutable struct stat_equil{TFL<:AbstractFloat,TI<:Integer}
+@with_kw mutable struct stat_equil{TF<:AbstractFloat,TI<:Integer}
     N_kh::TI #Number of grid points for capital and shock realisation, no default, must be supplied
     N_z::TI
 
     #Distribution of firms (first index corresponds to each value of capital, second index corresponds to shock realisation)
-    μ::Array{TFL,2} = zeros(N_kh,N_z)
+    μ::Array{TF,2} = zeros(N_kh,N_z)
 
-    #Value function
-
+    #Value function (beginning of period before ξ observed)
+    V::Array{TF,2} = zeros(N_kh,N_z)
 
     #Policy function
 
     #Prices
 
+
 end
 
 #This function performs checks of parameters
-function check_par(par,t_brex)
+function check_par(par,N_S)
     if par.σ <= 0
         error("σ must be positive")
     end
-    if par.T_max <= t_brex
+    if par.T_max <= par.tb
         error("T_max must be greater than t_brex")
     end
     if par.k_min > par.k_max
         error("k_min must be greater than k_max")
     end
+    if length(par.PS) != N_S
+        error("Parameter PS and parr_diff set in parameter file must have the same length")
+    end
 end
-
 
 end

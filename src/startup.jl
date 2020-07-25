@@ -11,7 +11,6 @@ const N_th::Int64 - the number of threads
 const N_S::Int64 - number of aggregate states (parametrisations)
 parfile::String - name of the parameter file
 par::Array{pars{Float64,Int64},1} - parameters for each steady state
-
 =#
 
 #Get command line arguments, save them in parsed_args named tuple (global variable). Also save parfile - the name of the parameter file
@@ -77,6 +76,9 @@ expr*="]"
 expr2 = Meta.parse(expr)
 eval(expr2)
 expr = nothing;expr2 = nothing
+
+#Check parameters
+check_par.(par,N_S)
 
 #Print a message about parameters:
 println("*********Summary of parameters:*************")
