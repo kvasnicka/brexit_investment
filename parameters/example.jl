@@ -13,7 +13,7 @@ The script needs to define the following variables: par_comm, par_diff, PS, t_br
 #Parameters which differ from the default values but are common to all aggregate states are in par_comm
 
 #Example: Set the discount factor and preferences in all states [everything else will be equal to default values]
-par_comm = "β = 0.9, σ = 2.0"
+par_comm = "β = 0.9,σ=2.0"
 
 #Parameters which are different between aggregate states are set in par_diff.
 #The number of elements of par_diff determines the number of states everywhere in the program.
@@ -27,6 +27,7 @@ par_diff = [
     "τ = 0.05,A=1.0",
     "τ = 0.1,A=1.0"
 ]
+
 
 #Probabilities for each aggregate state when Brexit is resolved.
 #The dimension must be the same as the number of different parametrisations set in par_diff
