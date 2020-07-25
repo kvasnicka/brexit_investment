@@ -61,25 +61,22 @@ println("Parameters loaded from file parameters/$parfile\n")
 #Number of aggregate states of the economy/parametrisations
 const N_S = length(par_diff)
 
-#Generate array par of parameters for different long-run equilibria.
-par = fill(pars(),N_S)
-#Generate different parameters using the strings above
+#Generate array par of parameters for different long-run equilibria
+#using values of parameters from the parameter file.
+expr = "par=["
 for i=1:N_S
-   expr = "par[$i] = pars("
-   if length(par_comm)>0
-        expr = expr*par_comm*","
-    end
-   if length(par_diff)>0
-        expr = expr*par_diff[i]
-    end
-    expr = expr*");"
-    #parse the string as a command and evaluate
-    ex1 = Meta.parse(expr)
-    eval(ex1)
-
-    #perform a parameter check to detect some standard errors
-    check_par(par[i],t_brex)
+    global expr
+   expr*="pars("
+   if length(par_comm)>0 expr *= par_comm*"," end
+   if length(par_diff)>0 expr *= par_diff[i] end
+    expr*="),"
 end
+expr*="]"
+
+#parse the string as a command and evaluate
+expr2 = Meta.parse(expr)
+eval(expr2)
+expr = nothing;expr2 = nothing
 
 #Print a message about parameters:
 println("*********Summary of parameters:*************")
