@@ -7,9 +7,8 @@
 import Pkg
 Pkg.activate(".")
 Pkg.instantiate()
-
 #Load necessary packages
-using Optim, Parameters, QuantEcon, BenchmarkTools
+using Optim, Parameters, QuantEcon, BenchmarkTools,JLD
 using .Threads #so we don't have to write Threads.@threads every time
 
 #Import the local module brexit_investment which contains all new functions, data types, etc. used in the project
@@ -36,27 +35,56 @@ The main body of the program follows. The algorithm proceeds in the following st
 
 #*************(0) Prep work**********************
 
+#=
 #Set up storage for stationary equilibria and transition paths
 
-#(It assumes that the number of grid points etc. are the same for all parametrisations, values from par[1] are used.).
+#SE - array of stationary equilibria (one for each element of par_diff).
 
-SE = fill(stat_equil(N_kh = par[1].N_kh,N_z = par[1].N_z),N_S);
+#TP -transition paths
+ This is a matrix of stationary equilibria struct. Calling it a stationary equilibrium is not accurate but it is essentially a path of distribution, value functions, etc. over time, where in each period we store the same objects that would be stored in a stationary equilibrium.
 
-#Transition paths (TP). This is a matrix of stationary equilibria struct. Calling it a stationary equilibrium is not accurate but it is essentially a path of distribution, value functions, etc. over time, where in each period we store the same objects that would be stored in a stationary equilibrium.
+#It is assumed that:
+1) the number of grid points etc. are the same for all parametrisations, values from par[1] are used.
+2) the length of all transition paths is the same and equal to the value in par[1].T_max)
+=#
 
-#(It is assumed that the length of all transition paths is the same and equal to the value in par[1].T_max)
-TP = fill(stat_equil(N_kh = par[1].N_kh,N_z = par[1].N_z),par[1].T_max,N_S);
+if ((@isdefined loadData) && (@isdefined loadFolder))
+    #loading SE, TP from files
+    println("Loading initial guess from folder results/$loadFolder.")
+    SE = load("results/$loadFolder/SE.jld","SE")
+    TP = load("results/$loadFolder/TP.jld","TP")
+else
+    #Initialisation with default values
+    SE = fill(stat_equil(N_kh = par[1].N_kh,N_z = par[1].N_z),N_S);
+    TP = fill(stat_equil(N_kh = par[1].N_kh,N_z = par[1].N_z),par[1].T_max,N_S);
+end
+
 
 #************(1) Stationary equilibrium ***************
 #Compute stationary equilibria for each set of parameters.
 
 println("Computing Stationary Equilibria...\n")
 for i=1:N_S
+println("Equilibrium $i out of $N_S")
     #SE[i] is initial guess
-    SE[i] = SE_compute(par,SE[i])
+    SE[i] = SE_compute!(par,SE[i])
 end
 
 #************(2) Transition paths************************
 
 
-#Saving results - unless save_results = false, save all variables.
+#************(3) Statistics, Plots, Saving results*****************
+
+
+#Saving results
+#(function is defined in brexTools.jl, see there for details)
+saveAll(foldername,SE,TP)
+
+println("**********************
+To do list:
+    - finish function SE_compute (skeleton)
+    - fill in details SE_compute
+    - compute stationary equilibria and debug
+
+    - only afterwards implement the transition paths.
+")

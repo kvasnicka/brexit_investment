@@ -8,7 +8,7 @@ The script needs to define the following variables: par_comm, par_diff, PS, t_br
 
 !Warning: The types of constants uses in this script must agree with the abstract types given in the struct definition. This mainly means that parameters which are supposed to be floats need to be given as Float constants (for example k_min = 1.0 is fine, k_min = 1 is not, because the program is trying to save an Integer variable into an Float type - no automatic conversion is performed in the current version of the program)
 
-There are 3 groups of parameters:
+There are 2 groups of parameters:
     (1) Parameters specific to a stationary equilibrium (aggregate state)
         - set using par_diff
     (2) Parameters non-specific to stationary equilibrium
@@ -43,3 +43,15 @@ par_diff = [
 ]
 
 #Warning: Setting the values of some variables to be different between Brexit states will break the program - usually these are parameters related to the solution technique (see brexDefs.jl for details). In general, changing values of parameters which have economic interpretation should be fine.
+
+#=If loadData = true, the program reads initial guesses for the Stationary equilibrium and transition paths from folder results/loadFolder
+
+This can be very useful when the computation takes a long time, or when convergence is problematic (then we can use as initial guess stationary equilibria and transition paths obtained for not too different set of parameters)
+
+These parameters are optional, if not defined here the program works fine.
+
+Warning: If the folder does not contain the data or contains wrong data (for example data obtained for a different number of grid points or length of transition path) the program will crash or may result in unpredictable behaviour!
+=#
+
+loadData = false
+loadFolder = "20200810_213249_example"

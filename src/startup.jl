@@ -51,8 +51,8 @@ end
 
 #Load parameters from file
 if length(parfile) == 0
-    println("No parameter file given. Using default parameter file example.jl.")
-    parfile="example.jl"
+    println("No parameter file given. Using default parameter file baseline.jl.")
+    parfile="baseline.jl"
 end
 include("../parameters/$parfile") #directory above
 println("Parameters loaded from file parameters/$parfile\n")
@@ -81,23 +81,23 @@ expr = nothing;expr2 = nothing
 check_par.(par,N_S)
 
 #Initialise results folder:
-foldername = genFolderName(parfile)
+foldername = "results/"*genFolderName(parfile)
 #Create results folder if it does not already exist
 if !isdir("results")
     mkdir("results")
 end
 #Create the results/foldername folder. If it already exists, an error will occur
 #(This could happen if the program is executed multiple times within a single second so the folder names are the same).
-mkdir("results/$foldername")
+mkdir(foldername)
 #Copy patemeter file in the results folder (for reproducibility)
-cp("parameters/$parfile","results/$foldername/$parfile")
+cp("parameters/$parfile","$foldername/$parfile")
 
 #Print a message about parameters:
 println("*********Summary of parameters:*************")
 println("All baseline parameters (pre-Brexit):")
 @show par[1] #par[1] is the baseline (pre-Brexit)
 println("_______________________")
-println("Parameters that vary:")
+println("Parameters that differ between stationary equilibria:")
 @show par_diff
 println(" ")
 println("********************************************")

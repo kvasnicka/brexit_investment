@@ -11,7 +11,7 @@ The role of each parameter is described in module BrexDefs (in BrexDefs.jl), in 
 
 Other files:
 
-Folder parameters contains various parameter configurations (see file parameters/example.jl for an example parameter file).
+Folder parameters contains various parameter configurations (see file parameters/baseline.jl for the baseline parameter file which can be used as template).
 
 Folder src contains source files for various modules. The convention is that one file contains one module, and each module can contain multiple related functions, definitions of data types, etc.
 
