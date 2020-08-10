@@ -77,8 +77,20 @@ expr2 = Meta.parse(expr)
 eval(expr2)
 expr = nothing;expr2 = nothing
 
-#Check parameters
+#Check parameters (element-wise)
 check_par.(par,N_S)
+
+#Initialise results folder:
+foldername = genFolderName(parfile)
+#Create results folder if it does not already exist
+if !isdir("results")
+    mkdir("results")
+end
+#Create the results/foldername folder. If it already exists, an error will occur
+#(This could happen if the program is executed multiple times within a single second so the folder names are the same).
+mkdir("results/$foldername")
+#Copy patemeter file in the results folder (for reproducibility)
+cp("parameters/$parfile","results/$foldername/$parfile")
 
 #Print a message about parameters:
 println("*********Summary of parameters:*************")

@@ -1,4 +1,6 @@
-#This is the main file. See Readme for how to run the program.
+#This is the main file. See Readme.md for how to run the program.
+
+#It is assumed that the working directory is the directory where main.jl is located and contains file Project.toml.
 
 #Activate project environment and install all dependent packages.
 #(same versions as the ones used in development)
@@ -57,13 +59,4 @@ end
 #************(2) Transition paths************************
 
 
-
-########Saving results#################
-#Implement the following:
-#Unless save_results = false
-#Upon running the program, a folder is generated in subfolder results.
-#Name of the folder is yymmdd_hhmmss_parfile and it contains (to begin with)
-#A copy of the parameter file.
-#A copy of the results (SE to begin with)
-#
-#Change .gitignore to make sure these are not uploaded to github.
+#Saving results - unless save_results = false, save all variables.

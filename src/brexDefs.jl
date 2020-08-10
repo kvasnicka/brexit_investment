@@ -17,7 +17,7 @@ the parameters into variables for direct access using for example
 
 #Need to be careful with abstract types. For example TFL is abstract float. But Integer is NOT a subtype of AbstractFloat, so if we for example use k_min::TFL = 1 we get an error because we are trying to assign Int64 constant to a type which does not contain integers.
 
- Warning: Every anonymous function needs to have its own parametric type (TF,TF2,...). For example see the declaration of u::TF1 and y::TF2
+ Note: Every anonymous function needs to have its own parametric type (TF,TF2,...). For example see the declaration of u::TF1 and y::TF2
  Otherwise the program crashes due to type mismatch when the parameters struct is instantiated.
 
  Also, every anonymous function needs to have a parametric type, otherwise
@@ -117,7 +117,6 @@ the parameters into variables for direct access using for example
     #Policy function
 
     #Prices
-
 
 end
 
