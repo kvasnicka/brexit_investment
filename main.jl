@@ -79,12 +79,3 @@ end
 #Saving results
 #(function is defined in brexTools.jl, see there for details)
 saveAll(foldername,SE,TP)
-
-println("**********************
-To do list:
-    - finish function SE_compute (skeleton)
-    - fill in details SE_compute
-    - compute stationary equilibria and debug
-
-    - only afterwards implement the transition paths.
-")

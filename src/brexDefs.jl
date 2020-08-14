@@ -115,8 +115,10 @@ the parameters into variables for direct access using for example
     V::Array{TF,2} = zeros(N_kh,N_z)
 
     #Policy function
+    
 
     #Prices
+
 
 end
 
