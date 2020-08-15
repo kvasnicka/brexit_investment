@@ -79,3 +79,10 @@ end
 #Saving results
 #(function is defined in brexTools.jl, see there for details)
 saveAll(foldername,SE,TP)
+
+
+println("
+To do:
+- Extend definition of SE type (prices, real exchange rate, ...)
+- Then extend the SE_compute template - down to cycling over grid points.
+")
