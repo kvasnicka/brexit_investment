@@ -48,7 +48,7 @@ The main body of the program follows. The algorithm proceeds in the following st
 2) the length of all transition paths is the same and equal to the value in par[1].T_max)
 =#
 
-if ((@isdefined loadData) && (@isdefined loadFolder))
+if ((@isdefined loadData) && (@isdefined loadFolder) && loadData)
     #loading SE, TP from files
     println("Loading initial guess from folder results/$loadFolder.")
     SE = load("results/$loadFolder/SE.jld","SE")
@@ -79,10 +79,3 @@ end
 #Saving results
 #(function is defined in brexTools.jl, see there for details)
 saveAll(foldername,SE,TP)
-
-
-println("
-To do:
-- Extend definition of SE type (prices, real exchange rate, ...)
-- Then extend the SE_compute template - down to cycling over grid points.
-")

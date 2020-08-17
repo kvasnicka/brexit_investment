@@ -111,15 +111,20 @@ the parameters into variables for direct access using for example
     #Distribution of firms (first index corresponds to each value of capital, second index corresponds to shock realisation)
     μ::Array{TF,2} = zeros(N_kh,N_z)
 
-    #Value function (beginning of period before ξ observed)
+    #Value function V(k,z) (beginning of period before ξ observed)
     V::Array{TF,2} = zeros(N_kh,N_z)
 
-    #Policy function
-    
+    #Policy functions:
+    #desired level of investment (does not depend on adjustment costs)
+    h::Array{TF,2} = zeros(N_kh,N_z)
+
+    #cutoff adjustment costs (it is optimal to invest
+    ξc::Array{TF,2} = zeros(N_kh,N_z)
 
     #Prices
-
-
+    Uc::TF = 1.0 #marginal utility of consumption
+    Q::TF = 1.0 #Real exchange rate
+    pd::TF = 1.0 #Relative price of domestic tradeable goods
 end
 
 #This function performs checks of parameters
