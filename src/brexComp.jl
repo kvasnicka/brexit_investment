@@ -29,6 +29,7 @@ for SEind = 1:par.SE_maxiter
 excess,SEn = ED(par,SE)
 
 #Stopping rule - to be implemented. At this stage of development break after the first loop.
+println("Stopping rule in SE_compute not implemented yet, only one iteration performed.")
 break
 
 end
@@ -46,8 +47,10 @@ end #of SE_compute!
 #!This is actually quite expensive.
 function ED(par,SEg)
     excess = [0.0,0.0,0.0] #excess demands placeholder
+
     SEn = copy(SEg) #Initialise the new stationary equilibrium
 
+    #Solve the firm's problem given prices
 #Solve the firms' problem given prices
 
 
@@ -58,3 +61,31 @@ end
 
 
 #Function firm_solve! solves the firm's problem given prices.
+#SEn is the new stationary equilibrium (candidate) where firm's value function, policy function, etc. will be saved.
+#SEg is the initial guess which shall not be changed by the function call in any way.
+#The function uses Caretesian indexing implemented in Julia - see https://julialang.org/blog/2016/02/iteration/
+function firm_solve!(par,SEn,SEg)
+    #Solve the problem at every grid point.
+
+    #Generate iterator (this takes no space and is fast)
+    V_ind = CartesianIndices((1:par.N_kh,1:par.N_k))
+
+    #parallel loop over grid points
+    @threads for i in eachindex(V_ind)
+        #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
+
+        #index of capital is V_ind[i][1]
+        #Index of shock realisation is V_ind[i][2]
+
+        #Need a function which computes total return (current plus continuation) for every choice of current controls. Composite of 2 functions. Current return and continuation return (which will use expectations and interpolation) - since we are allowing continuous choice of capital as opposed to full discretisation.
+
+        #Current return for each choice
+        #define function: Input: current capital, shock realisation, etc.
+
+        #Continuation return
+
+
+    end
+
+
+end

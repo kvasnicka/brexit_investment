@@ -107,9 +107,10 @@ the parameters into variables for direct access using for example
  end
 
 #mutable struct stat_equil contains everything that describes a stationary equilibrium: distribution of firms, prices, value and policy functions, etc.
+#!!!Warning. If this is changed we also need to change the copy function for the struct defined below, otherwise copying it will result in errors.
 @with_kw mutable struct stat_equil{TF<:AbstractFloat,TI<:Integer}
-    N_kh::TI #Number of grid points for capital and shock realisation, no default, must be supplied
-    N_z::TI
+    N_kh::TI=100 #Number of grid points for capital and shock realisation, no default, must be supplied
+    N_z::TI=9
 
     #Distribution of firms (first index corresponds to each value of capital, second index corresponds to shock realisation)
     μ::Array{TF,2} = zeros(N_kh,N_z)
@@ -129,6 +130,9 @@ the parameters into variables for direct access using for example
     Q::TF = 1.0 #Real exchange rate
     pd::TF = 1.0 #Relative price of domestic tradeable goods
 end
+
+#Adding method for copying structs
+Base.copy(s::stat_equil) = stat_equil(N_kh = s.N_kh, N_z = s.N_z, μ = s.μ, V = s.V, h = s.h, ξc = s.ξc, Uc = s.Uc, Q = s.Q, pd = s.pd)
 
 #This function performs checks of parameters
 function check_par(par,N_S)

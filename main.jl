@@ -65,7 +65,8 @@ end
 
 println("Computing Stationary Equilibria...\n")
 for i=1:N_S
-println("Equilibrium $i out of $N_S")
+println("________________________________
+Equilibrium $i out of $N_S")
     #SE[i] is initial guess
     SE_compute!(par[i],SE[i])
 end
@@ -82,6 +83,7 @@ saveAll(foldername,SE,TP)
 
 println("
 To do:
-- finish function ED
-    - Define a copy function for the struct
+- finish function ED (following notes in the code of function firm_solve!)
+- (first step - perform maximisation without regard for the continuation value)
+- implement Howard's acceleration in the skeleton algorithm
 ")
