@@ -96,6 +96,9 @@ the parameters into variables for direct access using for example
      #Tmax is the number of periods after which we assume that the model reaches the new stationary distribution. It is the total number of periods, not the number of periods after Brexit happens.
      T_max::TI = 100
 
+     #SE_maxiter is the maximum number of iterations in finding stationary equilibrium
+     SE_maxiter::TI = 200
+
      #VFI_maxiter is the maximum number of iterations in VFI algorithm (solving the individual firm's problem).
      VFI_maxiter::TI = 500
      VFI_howard::Bool = true #if true Howard's acceleration algoritm will be used

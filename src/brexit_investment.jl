@@ -10,7 +10,7 @@ using .Threads #so we don't have to write Threads.@threads every time
 export pars,stat_equil,check_par
 
 #Functions from brexComp.jl
-export SE_compute!
+export SE_compute!,ED
 
 #Export functions from brexTools.jl
 export genFolderName,prep0,saveAll,saveInFile,loadFromFile

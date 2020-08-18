@@ -67,7 +67,7 @@ println("Computing Stationary Equilibria...\n")
 for i=1:N_S
 println("Equilibrium $i out of $N_S")
     #SE[i] is initial guess
-    SE[i] = SE_compute!(par,SE[i])
+    SE_compute!(par[i],SE[i])
 end
 
 #************(2) Transition paths************************
@@ -79,3 +79,9 @@ end
 #Saving results
 #(function is defined in brexTools.jl, see there for details)
 saveAll(foldername,SE,TP)
+
+println("
+To do:
+- finish function ED
+    - Define a copy function for the struct
+")
