@@ -70,17 +70,43 @@ end
 #SEg is the initial guess which shall not be changed by the function call in any way.
 #The function uses Caretesian indexing implemented in Julia - see https://julialang.org/blog/2016/02/iteration/
 function firm_solve!(par,SEn,SEg)
+    #Value function iteration
+    for VFIind = 1:par.VFI_maxiter
+        #If this is the first iteration, or if the iteration index is a multiple of VFI_howard, update the policy function.
+        if (mod(VFIind,par.VFI_howard) == 0 || VFIind == 1)
+            #Sen contains the current policy function (and value function, prices, etc.) and the policy function part will be overwritten.
+            #poll_diff is the stopping criterion for policy function.
+            pol_diff = update_pol!(par,SEn)
+        end
 
-    #Generate iterator (this takes no space and is fast)
+        #Update the value function (again, SEn contains the updated policy function, etc.).
+        #V_diff is the stopping criterion value for value function
+        V_diff = update_V!(par,SEn)
+
+        #Check stopping criteria (for policy function or value function)
+        #(to do - so far no stopping criterion, maximum number of iterations always performed)
+
+    end
+
+
+
+
+end
+
+#Function update_pol! updates the policy function (and overwrites the previous one). It returns value corresponding to the stopping criterion.
+
+function update_pol!(par,SE)
+    #Generate iterator (this takes almost no memory and is fast)
     V_ind = CartesianIndices((1:par.N_kh,1:par.N_k))
 
-    #Value function iteration
-    #All of the below (maximisation step and update will be put inside a loop, iterated until convergence).
+    #First compute the unrestricted optimal capital level. This does not depend on the current level of capital, or adjustment costs, so we only loop over the current productivity.
+    #The number of productivity realisations tends to be quite small, so there might not even be a performance gain from multi-threading.
+    @threads for z_ind=1:par.N_z
+        #Compute optimal level of capital
+    end
 
-
-    #parallel loop over grid points (commented out during development for debugging purposes)
-    #@threads for i in eachindex(V_ind)
-    for i in eachindex(V_ind)
+    #parallel loop over grid points
+    @threads for i in eachindex(V_ind)
         #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
 
         #index of capital is V_ind[i][1]
@@ -89,10 +115,23 @@ function firm_solve!(par,SEn,SEg)
         #current capital and shock realisation
         k_ind = V_ind[i][1]
         z_ind = V_ind[i][2]
-
         k = par.k_gr[k_ind]
+
+        #Compute optimal labour supply (using HHs FOCs)
+
+        #Compute the optimal adjustment cost threshold.
 
     end
 
 
+    #placeholder for stopping criterion
+    return 0.0
+end
+
+
+#Function update_V! updates the value function (and overwrites the previous one). It returns value corresponding to the stopping criterion.
+function update_V!(par,SE)
+
+    #placeholder for stopping criterion
+    return 0.0
 end

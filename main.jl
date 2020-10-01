@@ -73,16 +73,16 @@ end
 #************(2) Transition paths************************
 
 
-#************(3) Statistics, Plots, Saving results*****************
+#************(3) Statistics, Plots*****************
 
 
 #Saving results
-#(function is defined in brexTools.jl, see there for details)
+#(function saveAll is defined in brexTools.jl, see there for details)
 saveAll(foldername,SE,TP)
 
 println("
 To do:
-- finish function ED (following notes in the code of function firm_solve!)
-- (first step - perform maximisation without regard for the continuation value)
-- implement Howard's acceleration in the skeleton algorithm
+- Finish function update_pol!
+- Implement function update_V!
+- Iterate on a SE candidate using the policy function, to get a limiting distribution of firms, given prices.
 ")

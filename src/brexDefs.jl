@@ -98,11 +98,11 @@ the parameters into variables for direct access using for example
      #SE_maxiter is the maximum number of iterations in finding stationary equilibrium
      SE_maxiter::TI = 200
 
-     #VFI_maxiter is the maximum number of iterations in VFI algorithm (solving the individual firm's problem).
+     #VFI_maxiter is the maximum number of iterations in the VFI algorithm - updates of the value function using the updated policy function.
+     #If Howard accelaration is used (VFI_howard = k>1), then maximisation is performed only every k-th iteration. This can speed things up quite a bit if the maximisation is a relatively expensive step in the computation.
      VFI_maxiter::TI = 500
-     VFI_howard::Bool = true #if true Howard's acceleration algoritm will be used
-     VFI_howard_c::TI = 20 #Maximisation is performed in iterations
-     #(1,1+VFI_howard_c,1+2*VFI_howard_c,...)
+     VFI_howard::TI = 10 #Default value is 1, a value of around 20 should be reasonable.
+
  end
 
 #mutable struct stat_equil contains everything that describes a stationary equilibrium: distribution of firms, prices, value and policy functions, etc.
@@ -118,11 +118,14 @@ the parameters into variables for direct access using for example
     V::Array{TF,2} = zeros(N_kh,N_z)
 
     #Policy functions:
-    #desired level of investment (does not depend on adjustment costs)
-    h::Array{TF,2} = zeros(N_kh,N_z)
+    #desired level of investment if there were no adjustment costs (does not depend on adjustment costs OR current capital stock).
+    #This is because the adjustment costs paid on investment adjustment do not depend on the current level of capital (a simplificaiton common in the literature). (for possible future generalisations, just turn this into a matrix like ξc)
+    h::Array{TF,1} = zeros(N_z)
 
     #cutoff adjustment costs (it is optimal to invest
     ξc::Array{TF,2} = zeros(N_kh,N_z)
+
+    #Labour supply
 
     #Prices
     Uc::TF = 1.0 #marginal utility of consumption
