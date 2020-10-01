@@ -62,7 +62,6 @@ end
 
 #************(1) Stationary equilibrium ***************
 #Compute stationary equilibria for each set of parameters.
-
 println("Computing Stationary Equilibria...\n")
 for i=1:N_S
 println("________________________________

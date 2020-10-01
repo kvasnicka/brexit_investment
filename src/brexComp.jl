@@ -43,16 +43,18 @@ end #of SE_compute!
 
 #The prices for which we compute excess demands are part of initial guess SEg.
 #Later on we can either write a wrapper function of prices only, or include prices as explicit argument here (if using a generic root-finding algorithm).
-
-#!This is actually quite expensive.
 function ED(par,SEg)
     excess = [0.0,0.0,0.0] #excess demands placeholder
 
     SEn = copy(SEg) #Initialise the new stationary equilibrium
+    #(this might be a bit wasteful since most of the values are overwritten later - maybe using an empty constructor is faster).
 
-    #Solve the firm's problem given prices
-#Solve the firms' problem given prices
+    #Solve the firm's problem given prices (these are contained in struct SEg along with the initial guess of value and policy functions).
+    #The new
+    firm_solve!(par,SEn,SEg)
 
+    #Given the distribution of firms and policy functions, get excess demands.
+    #First finish skeleton of firm_solve!
 
 #Return excess demands and the new candidate for stationary equilibrium
 return excess,SEn
@@ -77,7 +79,17 @@ function firm_solve!(par,SEn,SEg)
         #index of capital is V_ind[i][1]
         #Index of shock realisation is V_ind[i][2]
 
-        #Need a function which computes total return (current plus continuation) for every choice of current controls. Composite of 2 functions. Current return and continuation return (which will use expectations and interpolation) - since we are allowing continuous choice of capital as opposed to full discretisation.
+        #current capital and shock realisation
+        k_ind = V_ind[i][1]
+        z_ind = V_ind[i][2]
+
+        k = par.k_gr[k_ind]
+
+
+        #Function CPCret returns, for any choice of controls and the current state (k,z). Later on we will perform maximisation. For now we just call this for an arbitrary choice of controls.
+
+        CPCret(k,z_ind,z,SEg)
+
 
         #Current return for each choice
         #define function: Input: current capital, shock realisation, etc.
@@ -88,4 +100,11 @@ function firm_solve!(par,SEn,SEg)
     end
 
 
+end
+
+
+#Function CPCret returns the current plus continuation return for given current state and choices of controls.
+function CPCret(k,z_ind,z,SEg)
+    #Get current return
+    ret = 0.0
 end

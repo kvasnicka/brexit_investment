@@ -52,8 +52,6 @@ the parameters into variables for direct access using for example
      ϵ::TF = 0.5 #elasticity of substitution
      ω::TF = 0.5
 
-     #To be added (check with benchmarking if pre-computing terms makes any difference - if yes, pre-compute some of them).
-
 
      ############## Shocks ############################
      #Idiosyncratic productivity shock
@@ -90,7 +88,6 @@ the parameters into variables for direct access using for example
      #The same grid boundaries as in the individual firms' problem are used, (finer grid can be a good idea)
      N_kh::TI = N_k
      k_gr_hist::StepRangeLen = range(k_min,k_max,length = N_kh)
-
 
 
      #Tmax is the number of periods after which we assume that the model reaches the new stationary distribution. It is the total number of periods, not the number of periods after Brexit happens.
