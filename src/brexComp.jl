@@ -7,13 +7,13 @@ function SE_compute!(par,SE)
 #=Computation of stationary equilibrium proceeds in the following steps
 
 (1) Given prices, solve the firm's problem
-(2) Given solution of the firm's problem and prices, find a stationary distirbution (simulation)
+(2) Given solution of the firm's problem and prices, find a stationary distribution (simulation)
 (3) Find the excess demands (check market-clearing conditions)
 (4) Update prices given excess demands.
 
 Steps (1) - (4) are repeated until convergence of prices or the maximum number of iterations is reached.
 
-In principle, we we just need an excess demand function (ED(prices) and could use some standard root finding algorithm, possibly using numerical derivatives. The above is standard for univariate (one price) problems in heterogenous agents models and exploits the structure of the problem. With three prices it is unclear whether it still makes sense to use this algorithm and update multiple prices in step (4), or whether it is better to use a standard root finding procedure. To begin with we follow the standard procedure but later on can switch to standard root finding to find prices such that ED(prices) = [0,0,0] approximately.
+In principle, we just need an excess demand function (ED(prices) and could use some standard root finding algorithm, possibly using numerical derivatives. The above is standard for univariate (one price) problems in heterogenous agents models and exploits the structure of the problem. With three prices it is unclear whether it still makes sense to use this algorithm and update multiple prices in step (4), or whether it is better to use a standard root finding procedure. To begin with we follow the standard procedure but later on can switch to standard root finding to find prices such that ED(prices) = [0,0,0] approximately.
 
 =#
 
@@ -44,17 +44,20 @@ end #of SE_compute!
 #The prices for which we compute excess demands are part of initial guess SEg.
 #Later on we can either write a wrapper function of prices only, or include prices as explicit argument here (if using a generic root-finding algorithm).
 function ED(par,SEg)
-    excess = [0.0,0.0,0.0] #excess demands placeholder
+    excess = [0.0,0.0,0.0] #Initialise excess demands
+    #Compute the real wage (using households FOC and log linear utility) before copying new SE candidate (in any case, prices in SEn should not be used anywhere as they were not updated)
+    SEg.w = par.χ/SEg.Uc
+
 
     SEn = copy(SEg) #Initialise the new stationary equilibrium
     #(this might be a bit wasteful since most of the values are overwritten later - maybe using an empty constructor is faster).
 
-    #Solve the firm's problem given prices (these are contained in struct SEg along with the initial guess of value and policy functions).
-    #The new
+    #Solve the firm's problem given prices (these are contained in struct SEg along with the initial guess of value and policy functions), saving the new policy functions etc. in SEn (new stationary equilibrium candidate)
     firm_solve!(par,SEn,SEg)
 
+
     #Given the distribution of firms and policy functions, get excess demands.
-    #First finish skeleton of firm_solve!
+
 
 #Return excess demands and the new candidate for stationary equilibrium
 return excess,SEn
@@ -67,13 +70,17 @@ end
 #SEg is the initial guess which shall not be changed by the function call in any way.
 #The function uses Caretesian indexing implemented in Julia - see https://julialang.org/blog/2016/02/iteration/
 function firm_solve!(par,SEn,SEg)
-    #Solve the problem at every grid point.
 
     #Generate iterator (this takes no space and is fast)
     V_ind = CartesianIndices((1:par.N_kh,1:par.N_k))
 
-    #parallel loop over grid points
-    @threads for i in eachindex(V_ind)
+    #Value function iteration
+    #All of the below (maximisation step and update will be put inside a loop, iterated until convergence).
+
+
+    #parallel loop over grid points (commented out during development for debugging purposes)
+    #@threads for i in eachindex(V_ind)
+    for i in eachindex(V_ind)
         #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
 
         #index of capital is V_ind[i][1]
@@ -85,26 +92,7 @@ function firm_solve!(par,SEn,SEg)
 
         k = par.k_gr[k_ind]
 
-
-        #Function CPCret returns, for any choice of controls and the current state (k,z). Later on we will perform maximisation. For now we just call this for an arbitrary choice of controls.
-
-        CPCret(k,z_ind,z,SEg)
-
-
-        #Current return for each choice
-        #define function: Input: current capital, shock realisation, etc.
-
-        #Continuation return
-
-
     end
 
 
-end
-
-
-#Function CPCret returns the current plus continuation return for given current state and choices of controls.
-function CPCret(k,z_ind,z,SEg)
-    #Get current return
-    ret = 0.0
 end

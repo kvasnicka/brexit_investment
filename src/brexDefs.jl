@@ -34,7 +34,9 @@ the parameters into variables for direct access using for example
 
      #Very important to use parametric type TF for the anonymous function,
      #Otherwise JIT compilation often does not work properly (huge performance drop)
-     u::TF1 = σ == 1.0 ? (c,n) -> log(c) - χ*n : (c,n) -> (c^(1 - σ) - 1) / (1 - σ) - χ*n
+#     u::TF1 = σ == 1.0 ? (c,n) -> log(c) - χ*n : (c,n) -> (c^(1 - σ) - 1) / (1 - σ) - χ*n
+    #We assume a log linear utility function as Bloom et al, BT and others (simplifies computation a lot as real wage is then directly related to MUc and we need to iterate over one fewer price)
+     u::TF1 =  (c,n) -> log(c) - χ*n
 
      τ::TF = 0.0 #tarrif
 
@@ -126,15 +128,19 @@ the parameters into variables for direct access using for example
     Uc::TF = 1.0 #marginal utility of consumption
     Q::TF = 1.0 #Real exchange rate
     pd::TF = 1.0 #Relative price of domestic tradeable goods
+    w::TF = 1.0 #real wage (only saved for convenience, it is actually a function of Uc).
 end
 
 #Adding method for copying structs
-Base.copy(s::stat_equil) = stat_equil(N_kh = s.N_kh, N_z = s.N_z, μ = s.μ, V = s.V, h = s.h, ξc = s.ξc, Uc = s.Uc, Q = s.Q, pd = s.pd)
+Base.copy(s::stat_equil) = stat_equil(N_kh = s.N_kh, N_z = s.N_z, μ = s.μ, V = s.V, h = s.h, ξc = s.ξc, Uc = s.Uc, Q = s.Q, pd = s.pd,w = s.w)
 
 #This function performs checks of parameters
 function check_par(par,N_S)
     if par.σ <= 0
         error("σ must be positive")
+    end
+    if par.σ != 1.0
+        error("σ must be equal to 1.0 (only log utility implemented so far)")
     end
     if par.T_max <= par.tb
         error("T_max must be greater than t_brex")
