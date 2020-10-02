@@ -2,7 +2,7 @@ module brexit_investment
 
 using Revise
 
-using Optim, Parameters, QuantEcon, BenchmarkTools,Dates,JLD
+using Optim, Parameters, QuantEcon, BenchmarkTools,Dates,JLD,Interpolations
 using .Threads #so we don't have to write Threads.@threads every time
 
 

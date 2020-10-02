@@ -8,7 +8,7 @@ import Pkg
 Pkg.activate(".")
 Pkg.instantiate()
 #Load necessary packages
-using Optim, Parameters, QuantEcon, BenchmarkTools,JLD
+using Optim, Parameters, QuantEcon, BenchmarkTools,JLD, Interpolations
 using .Threads #so we don't have to write Threads.@threads every time
 
 #Import the local module brexit_investment which contains all new functions, data types, etc. used in the project

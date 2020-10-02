@@ -88,12 +88,15 @@ the parameters into variables for direct access using for example
 
      #Grid for capital of individual firm
      k_gr::StepRangeLen = range(k_min,k_max,length = N_k)
+     #Warning: With cubic spline interpolation (see Vint_mode below) we need to use equispaced grids, with linear interpolation any grid is fine.
 
      #Number of capital grid points in the histogram of firm's distribution.
      #The same grid boundaries as in the individual firms' problem are used, (finer grid can be a good idea)
      N_kh::TI = N_k
      k_gr_hist::StepRangeLen = range(k_min,k_max,length = N_kh)
 
+     #Vint_mode determines what interpolation type is used in value function interpolation. So far implemented values are 1 (linear interpolation) and 2 (cubic spline). 1 should be more robust, 2 could result in performance gains if stable.
+     Vint_mode::TI = 1
 
      #Tmax is the number of periods after which we assume that the model reaches the new stationary distribution. It is the total number of periods, not the number of periods after Brexit happens.
      T_max::TI = 100

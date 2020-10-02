@@ -109,6 +109,14 @@ function update_pol!(par,SE)
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
 
     #First compute the unrestricted optimal capital level. This does not depend on the current level of capital, or adjustment costs, so we only loop over the current productivity.
+
+    #Construct interpolator for the ex ante value function
+    Vint = get_Vint(par,SE.V)
+
+    #Objective function - expectation of the ex ante value function.
+    #Need a function which takes, as an input, current state (z_ind), transition matrix, some value of capital kpr (next-period capital)
+
+
     #The number of productivity shock realisations tends to be quite small, so there might not even be a performance gain from multi-threading.
     for z_ind=1:par.N_z
         #Compute optimal level of capital in the absence of adjustment costs
@@ -134,7 +142,6 @@ function update_pol!(par,SE)
         z_ind = V_ind[i][2]
         k = par.k_gr[k_ind]
 
-
         #Compute the optimal adjustment cost threshold.
 
     end
@@ -144,6 +151,37 @@ function update_pol!(par,SE)
     return 0.0
 end
 
+#Function get_Vint constructs an interpolator for the ex ante value function.
+#It returns object Vint, where Vint[z_ind](k) gives the value for idiosyncratic productivity with index z_ind and value of capital k.
+#(The object is an array of interpolators, one for each possible shock realisation)
+#Inputs are the parameter struct (which contains capital grid and number of grid points) and the value function on the grid.
+function get_Vint(par,V)
+    if par.Vint_mode == 1 #linear
+        Vint = fill(LinearInterpolation(par.k_gr,V[1:par.N_k,1]),par.N_z)
+        for zind = 2:par.N_z
+            Vint[zind] = LinearInterpolation(par.k_gr,V[1:par.N_k,zind])
+        end
+    elseif par.Vint_mode == 2 #cubic spline
+        Vint = fill(CubicSplineInterpolation(par.k_gr,V[1:par.N_k,1]),par.N_z)
+        for zind = 2:par.N_z
+            Vint[zind] = CubicSplineInterpolation(par.k_gr,V[1:par.N_k,zind])
+        end
+    else
+        error("Unsupported value of Vint_mode given.")
+    end
+
+    return Vint
+end
+
+#Expected ex ante value function. kpr is next-period capital level, z_ind the index of current shock realisation,P is the transition matrix, Vint is the value function interpolant obtained using function get_Vint
+function EV(kpr,z_ind,P,N_z,Vint)
+    EV = 0.0
+    for zpr = 1:N_z #cycle over next-period shock realisations, P[z_ind,zpr] is the transition probability
+        EV += P[z_ind,zpr]*Vint[zpr](kpr)
+        print(P[z_ind,zpr])
+    end
+    return EV
+end
 
 #Function update_V! updates the value function (and overwrites the previous one). It returns value corresponding to the stopping criterion.
 function update_V!(par,SE)
