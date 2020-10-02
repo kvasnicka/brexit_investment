@@ -48,16 +48,13 @@ function ED(par,SEg)
     #Compute the real wage (using households FOC and log linear utility) before copying new SE candidate (in any case, prices in SEn should not be used anywhere as they were not updated)
     SEg.w = par.χ/SEg.Uc
 
-
     SEn = copy(SEg) #Initialise the new stationary equilibrium
     #(this might be a bit wasteful since most of the values are overwritten later - maybe using an empty constructor is faster).
 
     #Solve the firm's problem given prices (these are contained in struct SEg along with the initial guess of value and policy functions), saving the new policy functions etc. in SEn (new stationary equilibrium candidate)
     firm_solve!(par,SEn,SEg)
 
-
     #Given the distribution of firms and policy functions, get excess demands.
-
 
 #Return excess demands and the new candidate for stationary equilibrium
 return excess,SEn
@@ -70,8 +67,12 @@ end
 #SEg is the initial guess which shall not be changed by the function call in any way.
 #The function uses Caretesian indexing implemented in Julia - see https://julialang.org/blog/2016/02/iteration/
 function firm_solve!(par,SEn,SEg)
+    #Compute the optimal labour supply (this is a static problem, depends only on prices and not on the continuation value).
+    compute_N!(par,SEn)
+
     #Value function iteration
     for VFIind = 1:par.VFI_maxiter
+
         #If this is the first iteration, or if the iteration index is a multiple of VFI_howard, update the policy function.
         if (mod(VFIind,par.VFI_howard) == 0 || VFIind == 1)
             #Sen contains the current policy function (and value function, prices, etc.) and the policy function part will be overwritten.
@@ -88,21 +89,31 @@ function firm_solve!(par,SEn,SEg)
 
     end
 
+end #firm_solve!
 
 
 
+#Function compute_N! computes the labour supply for each point in the state space (and saves it in SE.N)
+function compute_N!(par,SE)
+    V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
+    @threads for i in eachindex(V_ind)
+        k = par.k_gr[V_ind[i][1]]
+        z = par.shock_mc.state_values[V_ind[i][2]]
+        #SE.N[V_ind[i][1],V_ind[i][2]] = (SE.w/(par.A*z*k^par.α*par.ν))^(1/(1-ν))
+        SE.N[i] = min((SE.w/(par.A*z*k^par.α*par.ν))^(1/(1-par.ν)),par.Nmax)
+    end
 end
 
 #Function update_pol! updates the policy function (and overwrites the previous one). It returns value corresponding to the stopping criterion.
-
 function update_pol!(par,SE)
     #Generate iterator (this takes almost no memory and is fast)
-    V_ind = CartesianIndices((1:par.N_kh,1:par.N_k))
+    V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
 
     #First compute the unrestricted optimal capital level. This does not depend on the current level of capital, or adjustment costs, so we only loop over the current productivity.
-    #The number of productivity realisations tends to be quite small, so there might not even be a performance gain from multi-threading.
-    @threads for z_ind=1:par.N_z
-        #Compute optimal level of capital
+    #The number of productivity shock realisations tends to be quite small, so there might not even be a performance gain from multi-threading.
+    for z_ind=1:par.N_z
+        #Compute optimal level of capital in the absence of adjustment costs
+
     end
 
     #parallel loop over grid points
@@ -117,7 +128,6 @@ function update_pol!(par,SE)
         z_ind = V_ind[i][2]
         k = par.k_gr[k_ind]
 
-        #Compute optimal labour supply (using HHs FOCs)
 
         #Compute the optimal adjustment cost threshold.
 

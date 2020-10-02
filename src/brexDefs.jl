@@ -50,6 +50,9 @@ the parameters into variables for direct access using for example
      #A is TFP which is a constant so is not an input argument.
      y::TF2 = (z,k,n) -> A*z*k^α*n^ν
 
+     #Nlim is the maximum labour supply (for some calibrations, we can have very high labour supply if there is almost no capital and productivity is low)
+     Nmax::TF = 3.0
+
      #Production of final goods
      ϵ::TF = 0.5 #elasticity of substitution
      ω::TF = 0.5
@@ -122,10 +125,11 @@ the parameters into variables for direct access using for example
     #This is because the adjustment costs paid on investment adjustment do not depend on the current level of capital (a simplificaiton common in the literature). (for possible future generalisations, just turn this into a matrix like ξc)
     h::Array{TF,1} = zeros(N_z)
 
-    #cutoff adjustment costs (it is optimal to invest
+    #cutoff adjustment costs (it is optimal to invest if the realised adjustment cost is less than this).
     ξc::Array{TF,2} = zeros(N_kh,N_z)
 
-    #Labour supply
+    #Labour demand policy function
+    N::Array{TF,2} = zeros(N_kh,N_z)
 
     #Prices
     Uc::TF = 1.0 #marginal utility of consumption
@@ -135,7 +139,7 @@ the parameters into variables for direct access using for example
 end
 
 #Adding method for copying structs
-Base.copy(s::stat_equil) = stat_equil(N_kh = s.N_kh, N_z = s.N_z, μ = s.μ, V = s.V, h = s.h, ξc = s.ξc, Uc = s.Uc, Q = s.Q, pd = s.pd,w = s.w)
+Base.copy(s::stat_equil) = stat_equil(N_kh = s.N_kh, N_z = s.N_z, μ = s.μ, V = s.V, h = s.h, ξc = s.ξc, Uc = s.Uc, Q = s.Q, pd = s.pd,w = s.w,N=s.N)
 
 #This function performs checks of parameters
 function check_par(par,N_S)
