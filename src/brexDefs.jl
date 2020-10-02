@@ -111,25 +111,30 @@ the parameters into variables for direct access using for example
 #mutable struct stat_equil contains everything that describes a stationary equilibrium: distribution of firms, prices, value and policy functions, etc.
 #!!!Warning. If this is changed we also need to change the copy function for the struct defined below, otherwise copying it will result in errors.
 @with_kw mutable struct stat_equil{TF<:AbstractFloat,TI<:Integer}
-    N_kh::TI=100 #Number of grid points for capital and shock realisation, no default, must be supplied
+    #Number of grid points for capital and shock realisation
+    N_k::TI=100 #policy and value function grid points
+    N_kh::TI=100 #histogram grid points
     N_z::TI=9
 
     #Distribution of firms (first index corresponds to each value of capital, second index corresponds to shock realisation)
     μ::Array{TF,2} = zeros(N_kh,N_z)
 
     #Value function V(k,z) (beginning of period before ξ observed)
-    V::Array{TF,2} = zeros(N_kh,N_z)
+    V::Array{TF,2} = zeros(N_k,N_z)
 
-    #Policy functions:
-    #desired level of investment if there were no adjustment costs (does not depend on adjustment costs OR current capital stock).
+    #Policy functions and value functions:
+
+    #h is desired level of investment if there were no adjustment costs (does not depend on adjustment costs OR current capital stock).
     #This is because the adjustment costs paid on investment adjustment do not depend on the current level of capital (a simplificaiton common in the literature). (for possible future generalisations, just turn this into a matrix like ξc)
+    #E is the associated value function used for computing cutoff cost
     h::Array{TF,1} = zeros(N_z)
+    E::Array{TF,1} = zeros(N_z)
 
     #cutoff adjustment costs (it is optimal to invest if the realised adjustment cost is less than this).
-    ξc::Array{TF,2} = zeros(N_kh,N_z)
+    ξc::Array{TF,2} = zeros(N_k,N_z)
 
     #Labour demand policy function
-    N::Array{TF,2} = zeros(N_kh,N_z)
+    N::Array{TF,2} = zeros(N_k,N_z)
 
     #Prices
     Uc::TF = 1.0 #marginal utility of consumption

@@ -92,14 +92,13 @@ function firm_solve!(par,SEn,SEg)
 end #firm_solve!
 
 
-
 #Function compute_N! computes the labour supply for each point in the state space (and saves it in SE.N)
 function compute_N!(par,SE)
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
+    #debug -no threads
     @threads for i in eachindex(V_ind)
         k = par.k_gr[V_ind[i][1]]
         z = par.shock_mc.state_values[V_ind[i][2]]
-        #SE.N[V_ind[i][1],V_ind[i][2]] = (SE.w/(par.A*z*k^par.α*par.ν))^(1/(1-ν))
         SE.N[i] = min((SE.w/(par.A*z*k^par.α*par.ν))^(1/(1-par.ν)),par.Nmax)
     end
 end
@@ -113,6 +112,13 @@ function update_pol!(par,SE)
     #The number of productivity shock realisations tends to be quite small, so there might not even be a performance gain from multi-threading.
     for z_ind=1:par.N_z
         #Compute optimal level of capital in the absence of adjustment costs
+        #This will be saved in policy function h, value saved in E
+
+        #First write the objective function (so I can get this value of any level of k'. Then run a maximisation routine.)
+
+        #Implement maximisation.
+
+        #As a precaution only overwrite the previous policy if the return is strictly greater than the previous return.
 
     end
 
