@@ -125,8 +125,15 @@ function update_pol!(par,SE)
         #First write the objective function (so I can get this value of any level of k'. Then run a maximisation routine.)
 
         #Implement maximisation.
+        ku,value = find_KU(z_ind,par.shock_mc.p,par.N_z,Vint,par.k_min,par.k_max)
 
-        #As a precaution only overwrite the previous policy if the return is strictly greater than the previous return.
+        #To do: Save these values in SE
+        #Then continue below - use the optimal choice to compute the threshold, then we have the whole policy function and we can update the value function - need to use expectation over ξ etc.
+        #Also - check that this is actually correct and we really just needed to maximise that, and not add some terms in the optimisation problem apart from the expected ex ante continuation value
+        print(ku)
+        print(value)
+        error("Stopping in update_pol! Continue work from here")
+
 
     end
 
@@ -155,6 +162,7 @@ end
 #It returns object Vint, where Vint[z_ind](k) gives the value for idiosyncratic productivity with index z_ind and value of capital k.
 #(The object is an array of interpolators, one for each possible shock realisation)
 #Inputs are the parameter struct (which contains capital grid and number of grid points) and the value function on the grid.
+#Note: Currently, interpolant returns an out of bounds error if extrapolation is attempted.
 function get_Vint(par,V)
     if par.Vint_mode == 1 #linear
         Vint = fill(LinearInterpolation(par.k_gr,V[1:par.N_k,1]),par.N_z)
@@ -178,9 +186,24 @@ function EV(kpr,z_ind,P,N_z,Vint)
     EV = 0.0
     for zpr = 1:N_z #cycle over next-period shock realisations, P[z_ind,zpr] is the transition probability
         EV += P[z_ind,zpr]*Vint[zpr](kpr)
-        print(P[z_ind,zpr])
     end
     return EV
+end
+
+#Function find_Ku find the vlaue of capital which maximises the ex ante value function (Ku for Capital unconstrained by adjustment costs)
+#At this stage it uses a simple search algorithm withing bounds of the capital grid. The issue is that this does not use any initial guess so is not very efficient and may not be very stable either in case there are local optima (due to limitations of the Optim.jl package where univariate bounded optimisation does not use an initial guess). If this is a performance bottleneck, or if local instability is a problem, a way forward is to (1) write a wrapper function which allows evaluation of EV outside of capital grid (nearest neighbour plus a steep convex penalty function of distance from grid boundary), (2) use an unconstrained optimisation algorithm which uses an initial guess - policy function from previous iteration in VFI - and should converge faster (3) check if the optimal value falls withing boundaries and if not, use the bounded optimisation search algorithm.
+function find_KU(z_ind,P,N_z,Vint,k_min,k_max)
+    #This uses default values for algorithm settings, does not use an initial guess!
+    #Notice the -EV (because it's a minimisation function, we want to maximise)
+    res = optimize(kpr -> -EV(kpr,z_ind,P,N_z,Vint),k_min,k_max);
+
+    #Return a pair - the optimal capital choice, and the associated maximum value
+    return Optim.minimizer(res),-Optim.minimum(res) #(-1 again due to maxmin)
+
+    #Comment: If there are issues with convergence etc. implement some robustness,exception handling, etc.
+    #robustness  - compare the solution with the evaluated initial guess. If the initial guess is better, then return that.
+
+
 end
 
 #Function update_V! updates the value function (and overwrites the previous one). It returns value corresponding to the stopping criterion.
