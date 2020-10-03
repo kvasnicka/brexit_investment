@@ -56,6 +56,7 @@ function ED(par,SEg)
 
     #Given the distribution of firms and policy functions, get excess demands.
 
+
 #Return excess demands and the new candidate for stationary equilibrium
 return excess,SEn
 
@@ -81,14 +82,12 @@ function firm_solve!(par,SEn,SEg)
         end
 
         #Update the value function (again, SEn contains the updated policy function, etc.).
-        #V_diff is the stopping criterion value for value function
+        #V_diff is the stopping criterion value for the value function
         V_diff = update_V!(par,SEn)
 
         #Check stopping criteria (for policy function or value function)
         #(to do - so far no stopping criterion, maximum number of iterations always performed)
-
     end
-
 end #firm_solve!
 
 
@@ -113,28 +112,14 @@ function update_pol!(par,SE)
     #Construct interpolator for the ex ante value function
     Vint = get_Vint(par,SE.V)
 
-    #Objective function - expectation of the ex ante value function.
-    #Need a function which takes, as an input, current state (z_ind), transition matrix, some value of capital kpr (next-period capital)
-
-
-    #The number of productivity shock realisations tends to be quite small, so there might not even be a performance gain from multi-threading.
+    #Not using @threads in development. Try it later to see what performance difference it makes.
     for z_ind=1:par.N_z
         #Compute optimal level of capital in the absence of adjustment costs
         #This will be saved in policy function h, value saved in E
 
-        #First write the objective function (so I can get this value of any level of k'. Then run a maximisation routine.)
+        SE.h[z_ind],SE.E[z_ind] = find_KU(z_ind,par.shock_mc.p,par.N_z,Vint,par.k_min,par.k_max)
 
-        #Implement maximisation.
-        ku,value = find_KU(z_ind,par.shock_mc.p,par.N_z,Vint,par.k_min,par.k_max)
-
-        #To do: Save these values in SE
-        #Then continue below - use the optimal choice to compute the threshold, then we have the whole policy function and we can update the value function - need to use expectation over ξ etc.
-        #Also - check that this is actually correct and we really just needed to maximise that, and not add some terms in the optimisation problem apart from the expected ex ante continuation value
-        print(ku)
-        print(value)
-        error("Stopping in update_pol! Continue work from here")
-
-
+        #Warning! - the continuation value E does not include the left-over capital (1-δ)*k. So it is not exactly Vadj as in our model notation, but more like E in KT2008 paper. In the numerical implementation it is better to add this later (otherwise we would have to keep the value function E for all k)
     end
 
     #parallel loop over grid points
@@ -150,6 +135,20 @@ function update_pol!(par,SE)
         k = par.k_gr[k_ind]
 
         #Compute the optimal adjustment cost threshold.
+
+
+        #value of waiting (next period capital is depreciated current capital)
+        #(If the depreciated capital falls below the lowest grid point then truncate it to avoid extrapolation issues)
+        Vwait = EV(max(par.k_min,(1-par.δ)*k),z_ind,par.shock_mc.p,par.N_z,Vint)
+        #Vadj = E + (1-δ)k (E does not contains the policy)
+        Vadj = SE.E[z_ind] + (1-par.δ)*k
+
+        SE.ξc[i] = (Vadj - Vwait)/(SE.w*SE.pd)
+
+        #debug
+        if(SE.ξc[i]<0.0)
+            error("ξc should be non-negative. Check the code.")
+        end
 
     end
 
@@ -194,16 +193,15 @@ end
 #At this stage it uses a simple search algorithm withing bounds of the capital grid. The issue is that this does not use any initial guess so is not very efficient and may not be very stable either in case there are local optima (due to limitations of the Optim.jl package where univariate bounded optimisation does not use an initial guess). If this is a performance bottleneck, or if local instability is a problem, a way forward is to (1) write a wrapper function which allows evaluation of EV outside of capital grid (nearest neighbour plus a steep convex penalty function of distance from grid boundary), (2) use an unconstrained optimisation algorithm which uses an initial guess - policy function from previous iteration in VFI - and should converge faster (3) check if the optimal value falls withing boundaries and if not, use the bounded optimisation search algorithm.
 function find_KU(z_ind,P,N_z,Vint,k_min,k_max)
     #This uses default values for algorithm settings, does not use an initial guess!
-    #Notice the -EV (because it's a minimisation function, we want to maximise)
-    res = optimize(kpr -> -EV(kpr,z_ind,P,N_z,Vint),k_min,k_max);
+    #note -EV (because it's a minimisation function, we want to maximise)
+    #Also note that this does not include the (1-δ)k term which does not depend on the choice of next-period capital and is added to the value manually outside of this function.
+    res = optimize(kpr -> -(-kpr + EV(kpr,z_ind,P,N_z,Vint)),k_min,k_max);
 
     #Return a pair - the optimal capital choice, and the associated maximum value
     return Optim.minimizer(res),-Optim.minimum(res) #(-1 again due to maxmin)
 
     #Comment: If there are issues with convergence etc. implement some robustness,exception handling, etc.
     #robustness  - compare the solution with the evaluated initial guess. If the initial guess is better, then return that.
-
-
 end
 
 #Function update_V! updates the value function (and overwrites the previous one). It returns value corresponding to the stopping criterion.

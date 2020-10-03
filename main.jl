@@ -55,10 +55,9 @@ if ((@isdefined loadData) && (@isdefined loadFolder) && loadData)
     TP = load("results/$loadFolder/TP.jld","TP")
 else
     #Initialisation with default values
-    SE = fill(stat_equil(N_kh = par[1].N_kh,N_k = par[1].N_k,N_z = par[1].N_z),N_S);
+    SE = fill(stat_equil(N_kh = par[1].N_kh,N_k = par[1].N_k,N_z = par[1].N_z,V=log.(fillV(par[1].N_k,par[1].N_z,par[1].k_gr))),N_S);
     TP = fill(stat_equil(N_kh = par[1].N_kh,N_k = par[1].N_k,N_z = par[1].N_z),par[1].T_max,N_S);
 end
-
 
 #************(1) Stationary equilibrium ***************
 #Compute stationary equilibria for each set of parameters.

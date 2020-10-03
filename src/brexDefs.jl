@@ -50,6 +50,9 @@ the parameters into variables for direct access using for example
      #A is TFP which is a constant so is not an input argument.
      y::TF2 = (z,k,n) -> A*z*k^α*n^ν
 
+     #depreciation
+     δ::TF = 0.05
+
      #Nlim is the maximum labour supply (for some calibrations, we can have very high labour supply if there is almost no capital and productivity is low)
      Nmax::TF = 3.0
 
@@ -115,22 +118,26 @@ the parameters into variables for direct access using for example
 #!!!Warning. If this is changed we also need to change the copy function for the struct defined below, otherwise copying it will result in errors.
 @with_kw mutable struct stat_equil{TF<:AbstractFloat,TI<:Integer}
     #Number of grid points for capital and shock realisation
+    #(these are only default values - will be overwritten if these values are passed to the constructor when SE objects are generated)
     N_k::TI=100 #policy and value function grid points
     N_kh::TI=100 #histogram grid points
     N_z::TI=9
+
+
 
     #Distribution of firms (first index corresponds to each value of capital, second index corresponds to shock realisation)
     μ::Array{TF,2} = zeros(N_kh,N_z)
 
     #Value function V(k,z) (beginning of period before ξ observed)
     V::Array{TF,2} = zeros(N_k,N_z)
-
-    #Policy functions and value functions:
+    #Warning: zeros are a really bad initial guess because they will result in a corner solution in the first iteration - and with some unconstrained optimisation algorithms this could even result in a negative capital choice.
+    #So some better value should be used when initialising the SE object. See function fillV below for details.
 
     #h is desired level of investment if there were no adjustment costs (does not depend on adjustment costs OR current capital stock).
     #This is because the adjustment costs paid on investment adjustment do not depend on the current level of capital (a simplificaiton common in the literature). (for possible future generalisations, just turn this into a matrix like ξc)
     #E is the associated value function used for computing cutoff cost
     h::Array{TF,1} = zeros(N_z)
+
     E::Array{TF,1} = zeros(N_z)
 
     #cutoff adjustment costs (it is optimal to invest if the realised adjustment cost is less than this).
@@ -166,4 +173,17 @@ function check_par(par,N_S)
     if length(par.PS) != N_S
         error("Parameter PS and parr_diff set in parameter file must have the same length")
     end
+end
+
+#=function fill_V returns a value function, where the value is current capital, independent on z. This can then be used to construct some reasonable initial guess of the value function.
+
+It should be the case that the value function is concave and increasing, with slope initially greater than 1 (log(k) is a reasonable)
+(this guarantees that we will get an interior optimum in the first iteration, if the upper bound on capital is large enough)
+=#
+function fillV(N_k,N_z,k_gr)
+    V = zeros(N_k,N_z)
+    for i=1:N_k
+        V[i,:] .= k_gr[i]
+    end
+    return V
 end
