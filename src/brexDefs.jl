@@ -127,7 +127,8 @@ the parameters into variables for direct access using for example
 
 
     #Distribution of firms (first index corresponds to each value of capital, second index corresponds to shock realisation)
-    μ::Array{TF,2} = zeros(N_kh,N_z)
+    μ::Array{TF,2} = ones(N_kh,N_z)/(N_kh*N_z)
+    #default value is a naive guess of uniform distribution
 
     #Value function V(k,z) (beginning of period before ξ observed)
     V::Array{TF,2} = zeros(N_k,N_z)

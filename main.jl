@@ -67,6 +67,9 @@ println("________________________________
 Equilibrium $i out of $N_S")
     #SE[i] is initial guess
     SE_compute!(par[i],SE[i])
+
+#During development, only compute the first stationary equilibirum.
+break
 end
 
 #************(2) Transition paths************************

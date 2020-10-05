@@ -54,14 +54,82 @@ function ED(par,SEg)
     #Solve the firm's problem given prices (these are contained in struct SEg along with the initial guess of value and policy functions), saving the new policy functions etc. in SEn (new stationary equilibrium candidate)
     firm_solve!(par,SEn,SEg)
 
-    #Given the distribution of firms and policy functions, get excess demands.
+    #Function update_μ updates the new stationary distribution
+    update_μ!(par,SEn)
 
+
+    #To do: compute excess demands using market clearing conditions
 
 #Return excess demands and the new candidate for stationary equilibrium
 return excess,SEn
 
 end
 
+
+function update_μ!(par,SE)
+    #Initialise the new distribution μn at zeros. In every stage of the iteration update, the previous distribution is in SE.μ and the new one will be saved in μn. After convergence is achieved, overwrite the
+    μn = zeros(par.N_kh,par.N_z)
+
+    μ_ind = CartesianIndices((1:par.N_kh,1:par.N_z))
+    #update the distribution by applying the policy function.
+
+    #Construct also interpolators for the unrestricted capital policy function h, and for the adjustment cost threshold ξc (the latter is needed only if we are using a finer histogram than the grid for capital)
+
+    for i = 1:1000 #iterations to update the distribution
+    #cycle over all points in the historgram (use @threads after debugging)
+    for i in eachindex(μ_ind)
+        #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
+
+        #index of capital is V_ind[i][1]
+        #Index of shock realisation is V_ind[i][2]
+
+        #current capital and shock realisation
+        k_ind = μ_ind[i][1]
+        z_ind = μ_ind[i][2]
+        k = par.k_gr_hist[k_ind] #histogram grid, can be finer than the grid used to solve the firms' problem.
+        z = par.shock_mc.state_values[μ_ind[i][2]]
+        P = par.shock_mc.p #frequently used
+
+
+        if par.N_k == par.N_kh
+            #Same grid
+            #cycle over next-period shock realisations
+            for zpr_ind = 1:par.N_z
+
+                #Get kpr (next-period capital) using the policy functions. Because we allow choice of capital off-grid in the firm's problem solution, we need to find the closest points in the historgram, and assigne the density between the two points according to their distance
+
+                #Get the optimal choice of capital for firm with state (z,k).
+
+                #Construct
+
+                #Kpol(k,δ,ξ,ξc,h,k_min)
+
+            end
+
+        else
+            #Different grid - to be implemented later
+            error("N_k must be equal to N_kh. Finer historgram will be implemented later.")
+
+            #We have to interpolate also to get the threshold.
+        end
+
+
+
+
+    end
+
+
+
+    #update the distribution (need to use copy so it's not just a pointer)
+    SE.μ = copy(μn)
+
+    #And reset the new distribution to zeros again
+
+    #Check - every couple of iterations check that the distribution actually sums to one (accumulation of small errors?)
+
+    end
+
+end
 
 #Function firm_solve! solves the firm's problem given prices.
 #SEn is the new stationary equilibrium (candidate) where firm's value function, policy function, etc. will be saved.
@@ -84,7 +152,6 @@ function firm_solve!(par,SEn,SEg)
         #Get the new updated value function
         V_new = get_V0(par,SEn)
 
-
         #Check stopping criteria for the value function (difference b/w Vnew and SEn.V)
 
         #Absolute relative difference at each grid point:
@@ -93,7 +160,9 @@ function firm_solve!(par,SEn,SEg)
         AARD = mean(ARD) #average relative absolute deviation
 
         #Debug only: print(the stopping criteria values)
-        print("Iteration $VFIind: max ARD = $MARD, mean ARD = $AARD \n")
+        #print("Iteration $VFIind: max ARD = $MARD, mean ARD = $AARD \n")
+
+        #The VFI converges monotonically. Right now, the stopping rule is not checked and the maximum number of iterations is performed.
 
         #Update the value function
         SEn.V = copy(V_new)
@@ -123,8 +192,7 @@ function update_pol!(par,SE)
     #Construct interpolator for the ex ante value function
     Vint = get_Vint(par,SE.V)
 
-    #Not using @threads in development. Try it later to see what performance difference it makes
-    for z_ind=1:par.N_z
+    @threads for z_ind=1:par.N_z
         #Compute optimal level of capital in the absence of adjustment costs
         #This will be saved in policy function h, value saved in E
 
@@ -146,7 +214,6 @@ function update_pol!(par,SE)
         k = par.k_gr[k_ind]
 
         #Compute the optimal adjustment cost threshold.
-
 
         #value of waiting (next period capital is depreciated current capital)
         #(If the depreciated capital falls below the lowest grid point then truncate it to avoid extrapolation issues)
@@ -247,8 +314,26 @@ function get_Vint(par,V)
     else
         error("Unsupported value of Vint_mode given.")
     end
-
     return Vint
+end
+
+#Function ξcint generates interpolator for the capital adjustment threshold.
+#Same setting for the interpolation is used as for the value function.
+function get_ξcint(par,ξc)
+    if par.Vint_mode == 1 #linear
+        ξc_int = fill(LinearInterpolation(par.k_gr,ξc[1:par.N_k,1]),par.N_z)
+        for zind = 2:par.N_z
+            ξc_int[zind] = LinearInterpolation(par.k_gr,ξc[1:par.N_k,zind])
+        end
+    elseif par.Vint_mode == 2 #cubic spline
+        ξcint = fill(CubicSplineInterpolation(par.k_gr,ξc[1:par.N_k,1]),par.N_z)
+        for zind = 2:par.N_z
+            ξcint[zind] = CubicSplineInterpolation(par.k_gr,ξc[1:par.N_k,zind])
+        end
+    else
+        error("Unsupported value of Vint_mode.")
+    end
+    return ξcint
 end
 
 #Expected ex ante value function. kpr is next-period capital level, z_ind the index of current shock realisation,P is the transition matrix, Vint is the value function interpolant obtained using function get_Vint
