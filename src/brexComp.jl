@@ -73,7 +73,8 @@ function update_μ!(par,SE)
     μ_ind = CartesianIndices((1:par.N_kh,1:par.N_z))
     #update the distribution by applying the policy function.
 
-    #Construct also interpolators for the unrestricted capital policy function h, and for the adjustment cost threshold ξc (the latter is needed only if we are using a finer histogram than the grid for capital)
+    #Construct also interpolator the adjustment cost threshold ξc (it is needed only if we are using a finer histogram than the policy function grid)
+    #ξcint = get_ξcint(par,SE.ξc)
 
     for i = 1:1000 #iterations to update the distribution
     #cycle over all points in the historgram (use @threads after debugging)
@@ -90,7 +91,6 @@ function update_μ!(par,SE)
         z = par.shock_mc.state_values[μ_ind[i][2]]
         P = par.shock_mc.p #frequently used
 
-
         if par.N_k == par.N_kh
             #Same grid
             #cycle over next-period shock realisations
@@ -99,10 +99,17 @@ function update_μ!(par,SE)
                 #Get kpr (next-period capital) using the policy functions. Because we allow choice of capital off-grid in the firm's problem solution, we need to find the closest points in the historgram, and assigne the density between the two points according to their distance
 
                 #Get the optimal choice of capital for firm with state (z,k).
+                h = SE.h(z_ind) # contains the optimal capital for continuation value (will be chosen by firms that have ξ < ξc)
 
-                #Construct
+                #The cdf of ξ is G(ξ) = ξ/ξbar. So share G(ξc) of firms has lower adjustment costs than the threshold and chooses kpr = h.
+                #Share (1-G(ξc) lets capital depreciate and choose kpr = (1-δ)k (truncated so we don't fall off the grid for the lowest capital value).
+                G = SE.ξc(k_ind,z_ind)
 
-                #Kpol(k,δ,ξ,ξc,h,k_min)
+                #Now we just need to identify the closest grid point for each value of E(z) and return indices of the two closest grid points and the relative weights. Some of this can be precomputed for efficiency.
+
+                #Once we have this, add a share of the current measure SE.μ to the new measure G to one grid points closest to h, and (1-G) to gridpoints closest to (1-δ)k
+
+
 
             end
 
@@ -110,7 +117,7 @@ function update_μ!(par,SE)
             #Different grid - to be implemented later
             error("N_k must be equal to N_kh. Finer historgram will be implemented later.")
 
-            #We have to interpolate also to get the threshold.
+            #We have to interpolate also to get the threshold (so will use ξcint(k,z) instead of ξc(k_ind,z_ind as when the grids are the same)
         end
 
 
@@ -321,9 +328,9 @@ end
 #Same setting for the interpolation is used as for the value function.
 function get_ξcint(par,ξc)
     if par.Vint_mode == 1 #linear
-        ξc_int = fill(LinearInterpolation(par.k_gr,ξc[1:par.N_k,1]),par.N_z)
+        ξcint = fill(LinearInterpolation(par.k_gr,ξc[1:par.N_k,1]),par.N_z)
         for zind = 2:par.N_z
-            ξc_int[zind] = LinearInterpolation(par.k_gr,ξc[1:par.N_k,zind])
+            ξcint[zind] = LinearInterpolation(par.k_gr,ξc[1:par.N_k,zind])
         end
     elseif par.Vint_mode == 2 #cubic spline
         ξcint = fill(CubicSplineInterpolation(par.k_gr,ξc[1:par.N_k,1]),par.N_z)
