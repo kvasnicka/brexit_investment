@@ -47,11 +47,13 @@ the parameters into variables for direct access using for example
      α::TF = 0.3
      ν::TF = 0.6
      #Production function - Cobb-Douglas with decreasing returns.
-     #A is TFP which is a constant so is not an input argument.
-     y::TF2 = (z,k,n) -> A*z*k^α*n^ν
+     #A is TFP which is a constant in the baseline but it could vary later.
+     y::TF2 = (A,z,k,n) -> A*z*k^α*n^ν
 
      #depreciation
      δ::TF = 0.05
+
+     ξbar = 1.0 #maximum possible realisation of the adjustment cost (ξ is U[0,ξbar])
 
      #Nlim is the maximum labour supply (for some calibrations, we can have very high labour supply if there is almost no capital and productivity is low)
      Nmax::TF = 3.0
@@ -122,7 +124,6 @@ the parameters into variables for direct access using for example
     N_k::TI=100 #policy and value function grid points
     N_kh::TI=100 #histogram grid points
     N_z::TI=9
-
 
 
     #Distribution of firms (first index corresponds to each value of capital, second index corresponds to shock realisation)

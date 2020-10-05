@@ -81,7 +81,6 @@ saveAll(foldername,SE,TP)
 
 println("
 To do:
-- Finish function update_pol!
-- Implement function update_V!
 - Iterate on a SE candidate using the policy function, to get a limiting distribution of firms, given prices.
+- change function ED - is it actually necessary to create a copy of SEg? It doesn't seem to be an issue that it is overwritten.
 ")

@@ -49,7 +49,7 @@ function ED(par,SEg)
     SEg.w = par.χ/SEg.Uc
 
     SEn = copy(SEg) #Initialise the new stationary equilibrium
-    #(this might be a bit wasteful since most of the values are overwritten later - maybe using an empty constructor is faster).
+
 
     #Solve the firm's problem given prices (these are contained in struct SEg along with the initial guess of value and policy functions), saving the new policy functions etc. in SEn (new stationary equilibrium candidate)
     firm_solve!(par,SEn,SEg)
@@ -81,13 +81,16 @@ function firm_solve!(par,SEn,SEg)
             pol_diff = update_pol!(par,SEn)
         end
 
-        #Update the value function (again, SEn contains the updated policy function, etc.).
-        #V_diff is the stopping criterion value for the value function
-        V_diff = update_V!(par,SEn)
+        #Get the new updated value function
+        V_new = get_V0(par,SEn)
 
-        #Check stopping criteria (for policy function or value function)
-        #(to do - so far no stopping criterion, maximum number of iterations always performed)
-    end
+
+        #Check stopping criteria for the value function (difference b/w Vnew and SEn.V)
+
+        #Update the value function
+        SEn.V = copy(V_new)
+
+    end #VFI for loop
 end #firm_solve!
 
 
@@ -112,7 +115,7 @@ function update_pol!(par,SE)
     #Construct interpolator for the ex ante value function
     Vint = get_Vint(par,SE.V)
 
-    #Not using @threads in development. Try it later to see what performance difference it makes.
+    #Not using @threads in development. Try it later to see what performance difference it makes
     for z_ind=1:par.N_z
         #Compute optimal level of capital in the absence of adjustment costs
         #This will be saved in policy function h, value saved in E
@@ -143,18 +146,78 @@ function update_pol!(par,SE)
         #Vadj = E + (1-δ)k (E does not contains the policy)
         Vadj = SE.E[z_ind] + (1-par.δ)*k
 
-        SE.ξc[i] = (Vadj - Vwait)/(SE.w*SE.pd)
+        SE.ξc[i] = min((Vadj - Vwait)/(SE.w*SE.pd),par.ξbar)
+        #(truncate so the adjustment threshold is never greater than the maximum possible value of ξ. This is convenient so we do not have to check this when calculating expecations)
 
-        #debug
+        #safety check - if the cutoff is negative, it means that the continuation value of waiting is greater than the value of adjusting, which should never be the case if the algorithm found the global maximum. If it happens we need to investigate why.
         if(SE.ξc[i]<0.0)
-            error("ξc should be non-negative. Check the code.")
+            print("Warning: ξc should be non-negative.")
+            SE.ξc[i]=0.0
         end
+
+    end
+    #placeholder for stopping criterion
+    return 0.0
+end
+
+#Function get_V0 uses the policy functions and the value function contained in SE to return a new updated ex ante value function. Unlike update_pol it does not overwrite the original value function in place (due to synchronisation issues and checking convergence). A few things such as generating the iterator, interpolator, and looping, are the same as in updat_pol! and are explained there in more detail.
+function get_V0(par,SE)
+    Vnew = similar(SE.V) #initialise new value function
+
+    V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
+    Vint = get_Vint(par,SE.V)
+    #parallel loop over grid points
+    #@threads for i in eachindex(V_ind)
+    for i in eachindex(V_ind)
+        #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
+
+        #index of capital is V_ind[i][1]
+        #Index of shock realisation is V_ind[i][2]
+
+        #current capital and shock realisation
+        k_ind = V_ind[i][1]
+        z_ind = V_ind[i][2]
+        k = par.k_gr[k_ind]
+        z = par.shock_mc.state_values[z_ind]
+
+        #Get the updated ex ante value:
+        #current return (this does not depend on ξ so no need to take expectation)
+        Vnew[i] = (par.y(par.A,z,k,SE.N[i]))*SE.pd
+
+        #=
+        Now use the facts that ξ is U[o,ξbar]. For all ξ<=ξc(k,z), the firm does not adjust, in which case the ex post value V1(k,z,ξ) does not depend on ξ, and we get that part of the expectation trivially (just a constant times G(ξc), where G is the distribution function of ξ (G(ξ) = ξ/ξbar).
+
+        For ξ > ξc, the ex ante value does depend on ξ, but only through the adjustment cost term AC(ξ) which is a linear function so we can take an analytical expectation of this part too.
+
+
+        G = G(ξbar) is the share of firms that adjust their investment.
+        =#
+        G = SE.ξc[i]/par.ξbar
+        #value if not not adjusting * share of firms not adjusting
+        Vnew[i] +=  (1-G)*EV(max(par.k_min,(1-par.δ)*k),z_ind,par.shock_mc.p,par.N_z,Vint)
+
+        #value if adjusting excluding the terms that depends on ξ * share of firms adjusting + expeted AC(ξ) (conditional expectation)
+
+        #For unadjusted firms, do not forget that we need to addd the (1-δ) term to E to get V if adjusting.
+        Vadj = SE.E[z_ind] + (1-par.δ)*k
+        Vnew[i] += G*Vadj
+
+        #Finally subtract the expectation of adjustment costs (remember the reduced integration interval because they are paid only if ξ > ξc
+        Vnew[i] -= ((par.ξbar^2 - SE.ξc[i]^2)/par.ξbar) * SE.w*SE.pd
 
     end
 
 
-    #placeholder for stopping criterion
-    return 0.0
+    return Vnew
+end
+
+#Function Kpol(k,δ,ξ,ξc,h) (pol for policy) takes as input the current capital stock, depreciation, adjustment cost ξ, threshold ξc, and the optimal capital in the absence of adjustment costs h, returns the actual value of next-period capital
+function Kpol(k,δ,ξ,ξc,h,k_min)
+    if ξ < ξc
+        return h
+    else
+        return max((1-δ)*k,k_min) #truncate to avoid extrapolation issues at the low end of the grid
+    end
 end
 
 #Function get_Vint constructs an interpolator for the ex ante value function.
@@ -189,7 +252,7 @@ function EV(kpr,z_ind,P,N_z,Vint)
     return EV
 end
 
-#Function find_Ku find the vlaue of capital which maximises the ex ante value function (Ku for Capital unconstrained by adjustment costs)
+#Function find_Ku find the value of capital which maximises the ex ante value function (Ku for Capital unconstrained by adjustment costs)
 #At this stage it uses a simple search algorithm withing bounds of the capital grid. The issue is that this does not use any initial guess so is not very efficient and may not be very stable either in case there are local optima (due to limitations of the Optim.jl package where univariate bounded optimisation does not use an initial guess). If this is a performance bottleneck, or if local instability is a problem, a way forward is to (1) write a wrapper function which allows evaluation of EV outside of capital grid (nearest neighbour plus a steep convex penalty function of distance from grid boundary), (2) use an unconstrained optimisation algorithm which uses an initial guess - policy function from previous iteration in VFI - and should converge faster (3) check if the optimal value falls withing boundaries and if not, use the bounded optimisation search algorithm.
 function find_KU(z_ind,P,N_z,Vint,k_min,k_max)
     #This uses default values for algorithm settings, does not use an initial guess!
@@ -202,11 +265,4 @@ function find_KU(z_ind,P,N_z,Vint,k_min,k_max)
 
     #Comment: If there are issues with convergence etc. implement some robustness,exception handling, etc.
     #robustness  - compare the solution with the evaluated initial guess. If the initial guess is better, then return that.
-end
-
-#Function update_V! updates the value function (and overwrites the previous one). It returns value corresponding to the stopping criterion.
-function update_V!(par,SE)
-
-    #placeholder for stopping criterion
-    return 0.0
 end
