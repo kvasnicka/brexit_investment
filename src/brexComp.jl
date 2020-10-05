@@ -87,6 +87,14 @@ function firm_solve!(par,SEn,SEg)
 
         #Check stopping criteria for the value function (difference b/w Vnew and SEn.V)
 
+        #Absolute relative difference at each grid point:
+        ARD = (abs.(V_new-SEn.V)./(abs.(SEn.V) .+ 0.001))
+        MARD = maximum(ARD) #maximum relative absolute deviation
+        AARD = mean(ARD) #average relative absolute deviation
+
+        #Debug only: print(the stopping criteria values)
+        print("Iteration $VFIind: max ARD = $MARD, mean ARD = $AARD \n")
+
         #Update the value function
         SEn.V = copy(V_new)
 
@@ -149,9 +157,9 @@ function update_pol!(par,SE)
         SE.ξc[i] = min((Vadj - Vwait)/(SE.w*SE.pd),par.ξbar)
         #(truncate so the adjustment threshold is never greater than the maximum possible value of ξ. This is convenient so we do not have to check this when calculating expecations)
 
-        #safety check - if the cutoff is negative, it means that the continuation value of waiting is greater than the value of adjusting, which should never be the case if the algorithm found the global maximum. If it happens we need to investigate why.
+
+        #if the cutoff is negative, it means that the continuation value of waiting is greater than the value of adjusting, which should never be the case if the algorithm found the global maximum - but sometimes it can happen due to small numerical errors. In this case set the threshold to zero (so the firm does not adjust - in this case some vastly suboptimal choice may be found anyway).
         if(SE.ξc[i]<0.0)
-            print("Warning: ξc should be non-negative.")
             SE.ξc[i]=0.0
         end
 
@@ -216,7 +224,7 @@ function Kpol(k,δ,ξ,ξc,h,k_min)
     if ξ < ξc
         return h
     else
-        return max((1-δ)*k,k_min) #truncate to avoid extrapolation issues at the low end of the grid
+        return max((1-δ)*k,k_min) #truncate to avoid extrapolation issues at the low end of the grid (if (1-δ)k would fall off the grid, such as at the first grid point, we are effectively letting the firm keep their current capital without paying the adjustment cost)
     end
 end
 
