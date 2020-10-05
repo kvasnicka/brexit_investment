@@ -84,6 +84,8 @@ saveAll(foldername,SE,TP)
 
 println("
 To do:
+- Find closest two gridpoints and the weights. Split this into two functions - because the closest gridpoints can be precomputed (they are always the same becuase we are starting on a grid and the choice is either h(z) or (1-δk).
+
 - Iterate on a SE candidate using the policy function, to get a limiting distribution of firms, given prices.
 - change function ED - is it actually necessary to create a copy of SEg? It doesn't seem to be an issue that it is overwritten.
 ")

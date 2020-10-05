@@ -99,11 +99,11 @@ function update_μ!(par,SE)
                 #Get kpr (next-period capital) using the policy functions. Because we allow choice of capital off-grid in the firm's problem solution, we need to find the closest points in the historgram, and assigne the density between the two points according to their distance
 
                 #Get the optimal choice of capital for firm with state (z,k).
-                h = SE.h(z_ind) # contains the optimal capital for continuation value (will be chosen by firms that have ξ < ξc)
+                h = SE.h[z_ind] # contains the optimal capital for continuation value (will be chosen by firms that have ξ < ξc)
 
                 #The cdf of ξ is G(ξ) = ξ/ξbar. So share G(ξc) of firms has lower adjustment costs than the threshold and chooses kpr = h.
                 #Share (1-G(ξc) lets capital depreciate and choose kpr = (1-δ)k (truncated so we don't fall off the grid for the lowest capital value).
-                G = SE.ξc(k_ind,z_ind)
+                G = SE.ξc[k_ind,z_ind]
 
                 #Now we just need to identify the closest grid point for each value of E(z) and return indices of the two closest grid points and the relative weights. Some of this can be precomputed for efficiency.
 
