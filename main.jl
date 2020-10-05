@@ -15,7 +15,6 @@ using .Threads #so we don't have to write Threads.@threads every time
 import brexit_investment
 using brexit_investment
 
-
 #Run start-up script (see the file for details of what it does)
 #Most importantly it loads parameters from file and collects these in array par.
 #Some outputs are N_S (number of parametrisations/equilibria), N_th (num of threads), par (array of parameters).
@@ -77,7 +76,6 @@ end
 
 #************(3) Statistics, Plots*****************
 
-
 #Saving results
 #(function saveAll is defined in brexTools.jl, see there for details)
 saveAll(foldername,SE,TP)
@@ -88,4 +86,10 @@ To do:
 
 - Iterate on a SE candidate using the policy function, to get a limiting distribution of firms, given prices.
 - change function ED - is it actually necessary to create a copy of SEg? It doesn't seem to be an issue that it is overwritten.
+
+- in the firm problem solution (maximising value) check why there is sometimes slightly negative adjustment threshold (numerical inaccuracy or grid boundary?)
+
+- simulation - two options: manual, or construct a transition matrix, and use BLAS matrix multiplication (multithreaded, optimised). Which is faster? It might depend also on the number of iterations...
+
+- check the stopping criterion in value function iteration - this will be important once we iterate over prices so the firm's problem is solved many times (for now it doesn't matter that 500 iterations are performed)
 ")

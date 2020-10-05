@@ -50,7 +50,6 @@ function ED(par,SEg)
 
     SEn = copy(SEg) #Initialise the new stationary equilibrium
 
-
     #Solve the firm's problem given prices (these are contained in struct SEg along with the initial guess of value and policy functions), saving the new policy functions etc. in SEn (new stationary equilibrium candidate)
     firm_solve!(par,SEn,SEg)
 
@@ -73,16 +72,17 @@ function update_μ!(par,SE)
     μ_ind = CartesianIndices((1:par.N_kh,1:par.N_z))
     #update the distribution by applying the policy function.
 
-    #Construct also interpolator the adjustment cost threshold ξc (it is needed only if we are using a finer histogram than the policy function grid)
+    #Construct also interpolator for the adjustment cost threshold ξc (it is needed only if we are using a finer histogram than the policy function grid)
     #ξcint = get_ξcint(par,SE.ξc)
+
+    #Pre-compute the closest points in the grid for both the optimal choice and for the depreciated capital, and the associated weights. This saves a lot of time compared to finding these points repeatedly (costly grid search).
+    hclose,hclosew,kdclose,kdclosew = prepClosePoints(SE,par);
 
     for i = 1:1000 #iterations to update the distribution
     #cycle over all points in the historgram (use @threads after debugging)
     for i in eachindex(μ_ind)
-        #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
-
-        #index of capital is V_ind[i][1]
-        #Index of shock realisation is V_ind[i][2]
+        #index of capital is μ_ind[i][1]
+        #Index of shock realisation is μ_ind[i][2]
 
         #current capital and shock realisation
         k_ind = μ_ind[i][1]
@@ -96,16 +96,18 @@ function update_μ!(par,SE)
             #cycle over next-period shock realisations
             for zpr_ind = 1:par.N_z
 
-                #Get kpr (next-period capital) using the policy functions. Because we allow choice of capital off-grid in the firm's problem solution, we need to find the closest points in the historgram, and assigne the density between the two points according to their distance
+                #Get kpr (next-period capital) using the policy functions. Because we allow choice of capital off-grid in the firm's problem solution, we need to find the closest points in the histogram, and assigne the density between the two points according to their distance
 
                 #Get the optimal choice of capital for firm with state (z,k).
                 h = SE.h[z_ind] # contains the optimal capital for continuation value (will be chosen by firms that have ξ < ξc)
 
                 #The cdf of ξ is G(ξ) = ξ/ξbar. So share G(ξc) of firms has lower adjustment costs than the threshold and chooses kpr = h.
                 #Share (1-G(ξc) lets capital depreciate and choose kpr = (1-δ)k (truncated so we don't fall off the grid for the lowest capital value).
-                G = SE.ξc[k_ind,z_ind]
+                G = SE.ξc[k_ind,z_ind]/par.ξbar
 
-                #Now we just need to identify the closest grid point for each value of E(z) and return indices of the two closest grid points and the relative weights. Some of this can be precomputed for efficiency.
+                #We already got the closest points and the associated weights for each choice of capital.
+                error("Continue from here...")
+                #Question: Is it better to hand-implement the simulation - easier to code and debug, or construct a transition matrix here? (The latter approach might be faster but it might be an issue with a large historgram - inverting a huge matrix.)
 
                 #Once we have this, add a share of the current measure SE.μ to the new measure G to one grid points closest to h, and (1-G) to gridpoints closest to (1-δ)k
 
@@ -365,4 +367,82 @@ function find_KU(z_ind,P,N_z,Vint,k_min,k_max)
 
     #Comment: If there are issues with convergence etc. implement some robustness,exception handling, etc.
     #robustness  - compare the solution with the evaluated initial guess. If the initial guess is better, then return that.
+end
+
+#Function findclosest2 finds the two points in a grid X which are closest to point x.
+#If point x is exactly equal to some grid point, then both returned points will be equal to x.
+function findclosest2(x,X)
+    absdist = abs.(X .- x)
+
+    #value and index of the closest element
+    (minval, i) = findmin(absdist)
+
+    if x == X[i]
+       return [i,i] #exact match
+    end
+
+    if i == 1
+       return [1,2] #first point the closset, so the 2 closest are 1 and 2
+    elseif i == length(X)
+       return [length(X)-1,length(X)]
+    end
+
+    #The most common case, we are not at the edge of the grid, so we can take a look at the left
+    #and the right neighbouring point to the minimum distance one and pick the closer one.
+    if(abs(x-X[i-1]) < abs(x-X[i+1]))
+       return [i-1,i]
+    else
+        return [i,i+1]
+    end
+end
+
+
+
+function prepClosePoints(SE,par)
+    #=
+    Function prepClosePoints finds the closest two points in the histogram for:
+    (1) the capital choices contained in the policy function (h)
+    (2) depreciated capital choice (1-δ)k
+    It also finds the weights on these two points.
+    =#
+
+    hclose = fill(0,par.N_z,2) #fill so it's integer type
+    hclosew = zeros(par.N_z,2) #weight
+    for z_ind = 1:par.N_z
+        hclose[z_ind,:] = findclosest2(SE.h[z_ind],par.k_gr_hist)
+        #(SE.h[z_ind] is the optimal capital level at this grid point)
+
+        #generate weights on the two points (convex combination)
+        k1 = par.k_gr_hist[hclose[z_ind,1]]
+        k2 = par.k_gr_hist[hclose[z_ind,2]]
+
+        #If both points are the same, it means that the policy implies a corner solution.
+        #We need to treat this case separately to avoid division by 0. Assign equal weights.
+        if(k1 == k2)
+            hclosew[z_ind,1:2] .= 0.5
+        else
+            hclosew[z_ind,1] = (k2 - SE.h[z_ind])/(k2-k1)
+            hclosew[z_ind,2] = 1-hclosew[z_ind,1]
+        end
+    end
+
+    kdclose = fill(0,par.N_k,2)
+    kdclosew = zeros(par.N_k,2)
+    for k_ind = 1:par.N_k
+        k = par.k_gr_hist[k_ind] #current stock
+        kd = max((1-par.δ)*k,par.k_min) #depreciated capital truncated from below (so we don't fall off the grid)
+        #find the closest gridpoint to next-period depreciated capital (1-δ)k
+        kdclose[k_ind,:] = findclosest2(kd,par.k_gr_hist)
+
+        k1 = par.k_gr_hist[kdclose[k_ind,1]]
+        k2 = par.k_gr_hist[kdclose[k_ind,2]]
+
+        if(k1 == k2)
+            kdclosew[k_ind,1:2] .= 0.5
+        else
+            kdclosew[k_ind,1] = (k2 - kd)/(k2-k1)
+            kdclosew[k_ind,2] = 1-kdclosew[k_ind,1]
+        end
+    end
+    return hclose,hclosew,kdclose,kdclosew
 end
