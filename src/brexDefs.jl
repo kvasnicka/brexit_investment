@@ -87,7 +87,7 @@ the parameters into variables for direct access using for example
 
      ############## Solution algorithm parameters ###############
      #Grid for capital in individual firm's problem
-     N_k::TI = 100
+     N_k::TI = 20 #just for development - maybe 100 is reasonable (with cubic spline)
      k_min::TF = 0.01 #should be > 0 (for stability)
      k_max::TF = 20.0 #needs to be checked ex-post
 
@@ -111,8 +111,8 @@ the parameters into variables for direct access using for example
 
      #VFI_maxiter is the maximum number of iterations in the VFI algorithm - updates of the value function using the updated policy function.
      #If Howard accelaration is used (VFI_howard = k>1), then maximisation is performed only every k-th iteration. This can speed things up quite a bit if the maximisation is a relatively expensive step in the computation.
-     VFI_maxiter::TI = 500
-     VFI_howard::TI = 10 #Default value is 1, a value of around 20 should be reasonable.
+     VFI_maxiter::TI = 5000 #just for development - a greater value should be set (and a stopping criterion used)
+     VFI_howard::TI = 1 #Default value is 1, a value of around 20 should be reasonable.
 
  end
 

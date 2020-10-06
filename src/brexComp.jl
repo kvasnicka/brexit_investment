@@ -53,8 +53,8 @@ function ED(par,SEg)
     #Solve the firm's problem given prices (these are contained in struct SEg along with the initial guess of value and policy functions), saving the new policy functions etc. in SEn (new stationary equilibrium candidate)
     firm_solve!(par,SEn,SEg)
 
-    #Function update_μ updates the new stationary distribution
-    update_μ!(par,SEn)
+    #Find the stationary distribution of firms
+    stationary_μ!(par,SEn)
 
 
     #To do: compute excess demands using market clearing conditions
@@ -65,20 +65,50 @@ return excess,SEn
 end
 
 
-function update_μ!(par,SE)
-    #Initialise the new distribution μn at zeros. In every stage of the iteration update, the previous distribution is in SE.μ and the new one will be saved in μn. After convergence is achieved, overwrite the
-    μn = zeros(par.N_kh,par.N_z)
+function stationary_μ!(par,SE)
+    #Function stationary_μ! finds the stationary distribution μ using a simulation method.
+    #Note: We use a simulation method as opposed to constructing a transition matrix and looking for a stationary distribution directly because the major part of the algorithm focuses on transition paths, where the distribution has to be updated by applying the policy function only once. In this case, it is not efficient to construct the matrix (costly) and then apply matrix multiplication, we might as well directly perform the simulation step.
 
-    μ_ind = CartesianIndices((1:par.N_kh,1:par.N_z))
-    #update the distribution by applying the policy function.
+
+
 
     #Construct also interpolator for the adjustment cost threshold ξc (it is needed only if we are using a finer histogram than the policy function grid)
     #ξcint = get_ξcint(par,SE.ξc)
+    #Pass this to the function
 
     #Pre-compute the closest points in the grid for both the optimal choice and for the depreciated capital, and the associated weights. This saves a lot of time compared to finding these points repeatedly (costly grid search).
     hclose,hclosew,kdclose,kdclosew = prepClosePoints(SE,par);
 
+    #Move the below to a function: sim_step()
+
     for i = 1:1000 #iterations to update the distribution
+
+    #Update the distribution
+    μn = update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
+
+    #Update the distribution in SE (in place). We can also check convergence criteria.
+    SE.μ = copy(μn)
+
+    #Check numerical errors - does the distribution actually sum to one?
+
+
+    end
+
+end #stationary_μ!
+
+#=
+Function update_μ takes a given distribution of firms and returns the next-period distribution of firms μn by applying the firm's policy functions for capital and the law of motion for exogenous shocks. The current distribution and policy functions are saved in struct SE.
+
+Note: we need to precompute and pass the indices and weights of closest grid points (hclose,hclosew,kdclose,kdclosew).
+=#
+function update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
+    μn = zeros(par.N_kh,par.N_z) #initialise the distribution
+    μ_ind = CartesianIndices((1:par.N_kh,1:par.N_z)) #get indices for looping
+
+    #frequently used - shock process transition matrix and state values.
+    P = par.shock_mc.p #frequently used
+    zvals = par.shock_mc.state_values
+
     #cycle over all points in the historgram (use @threads after debugging)
     for i in eachindex(μ_ind)
         #index of capital is μ_ind[i][1]
@@ -89,55 +119,40 @@ function update_μ!(par,SE)
         z_ind = μ_ind[i][2]
         k = par.k_gr_hist[k_ind] #histogram grid, can be finer than the grid used to solve the firms' problem.
         z = par.shock_mc.state_values[μ_ind[i][2]]
-        P = par.shock_mc.p #frequently used
 
+        #=Depending on the adjustment cost realisation ξ, the firm will (A) adjust and set its capital equal to the optimal unadjusted capital (h(Z)), or (B) not adjust and set capital to (1-δ)k.
+
+        The share of firms that adjust is G(ξc) = ξc/ξbar, where ξc is the cutoff point for the current state, given by policy function ξc(k,z). All these firms choose that same capital stock. The share of firms that do not adjust is 1-G(ξc), and all these firms let capital depreciate.
+
+        Because the choices of capital in the policy function h and the depreciated capital do not fall exactly on the histogram grid, we need to find the two closest points in the grid, and split the measure of firms between the two points (using a linear weighting which puts more weight on the closer grid point). Because the choices are fixed, we have precomputed the indices of grid points and the weights.
+                =#
+
+        #(A) firms that adjust
         if par.N_k == par.N_kh
-            #Same grid
-            #cycle over next-period shock realisations
-            for zpr_ind = 1:par.N_z
-
-                #Get kpr (next-period capital) using the policy functions. Because we allow choice of capital off-grid in the firm's problem solution, we need to find the closest points in the histogram, and assigne the density between the two points according to their distance
-
-                #Get the optimal choice of capital for firm with state (z,k).
-                h = SE.h[z_ind] # contains the optimal capital for continuation value (will be chosen by firms that have ξ < ξc)
-
-                #The cdf of ξ is G(ξ) = ξ/ξbar. So share G(ξc) of firms has lower adjustment costs than the threshold and chooses kpr = h.
-                #Share (1-G(ξc) lets capital depreciate and choose kpr = (1-δ)k (truncated so we don't fall off the grid for the lowest capital value).
-                G = SE.ξc[k_ind,z_ind]/par.ξbar
-
-                #We already got the closest points and the associated weights for each choice of capital.
-                error("Continue from here...")
-                #Question: Is it better to hand-implement the simulation - easier to code and debug, or construct a transition matrix here? (The latter approach might be faster but it might be an issue with a large historgram - inverting a huge matrix.)
-
-                #Once we have this, add a share of the current measure SE.μ to the new measure G to one grid points closest to h, and (1-G) to gridpoints closest to (1-δ)k
-
-
-
-            end
-
+            #Same grid for policy function and histogram.
+            G = SE.ξc[k_ind,z_ind]/par.ξbar #Share of firms that adjust
         else
-            #Different grid - to be implemented later
-            error("N_k must be equal to N_kh. Finer historgram will be implemented later.")
-
-            #We have to interpolate also to get the threshold (so will use ξcint(k,z) instead of ξc(k_ind,z_ind as when the grids are the same)
+            #different grids (need to use interpolation to get the cutoff point)
+            error("Different grids not supported yet. Generalise function prepClosePoints.")
         end
 
+        h = SE.h[z_ind] #capital choice for firm that adjust - just for debugging (we already precomputed the closest points and weights)
+
+        #The closest grid points and weights:
+
+        h1 = hclose[z_ind,1]
+        h2 = hclose[z_ind,1]
+
+
+        #(B) firms that do not adjust
 
 
 
+        #construct - weight that goes to all kpr.
     end
 
 
-
-    #update the distribution (need to use copy so it's not just a pointer)
-    SE.μ = copy(μn)
-
-    #And reset the new distribution to zeros again
-
-    #Check - every couple of iterations check that the distribution actually sums to one (accumulation of small errors?)
-
-    end
-
+    return μn
 end
 
 #Function firm_solve! solves the firm's problem given prices.
@@ -150,16 +165,23 @@ function firm_solve!(par,SEn,SEg)
 
     #Value function iteration
     for VFIind = 1:par.VFI_maxiter
+        Vint = get_Vint(par,SEn.V) #construct interpolator for the current value function (which is SE.V)
 
         #If this is the first iteration, or if the iteration index is a multiple of VFI_howard, update the policy function.
         if (mod(VFIind,par.VFI_howard) == 0 || VFIind == 1)
-            #Sen contains the current policy function (and value function, prices, etc.) and the policy function part will be overwritten.
+            #SEn contains the current policy function (and value function, prices, etc.) and the policy function part will be overwritten.
             #poll_diff is the stopping criterion for policy function.
-            pol_diff = update_pol!(par,SEn)
+            pol_diff = update_pol!(par,SEn,Vint)
+        else
+            #We do not update the policy but we still have to update the value of choosing the policy h!
+            for z_ind = 1:par.N_z
+                #Value of optimal adjustment is just the expected ex ante value of choosing the optimal capital level h, minus the chosen capital level.
+                SEn.E[z_ind] = EV(SEn.h[z_ind],1,par.shock_mc.p,par.N_z,Vint) - SEn.h[z_ind]
+            end
         end
 
         #Get the new updated value function
-        V_new = get_V0(par,SEn)
+        V_new = get_V0(par,SEn,Vint)
 
         #Check stopping criteria for the value function (difference b/w Vnew and SEn.V)
 
@@ -167,6 +189,12 @@ function firm_solve!(par,SEn,SEg)
         ARD = (abs.(V_new-SEn.V)./(abs.(SEn.V) .+ 0.001))
         MARD = maximum(ARD) #maximum relative absolute deviation
         AARD = mean(ARD) #average relative absolute deviation
+
+        #Debug - checking convergence:
+        #Average absolute deviation - this also needs to converge, not just the relative one!
+        AAD = mean(abs.(V_new-SEn.V))
+        AV = mean(V_new)
+        print("Iter $VFIind, Avg. V = $AV, AAD = $AAD, AARD = $AARD \n")
 
         #Debug only: print(the stopping criteria values)
         #print("Iteration $VFIind: max ARD = $MARD, mean ARD = $AARD \n")
@@ -184,7 +212,8 @@ end #firm_solve!
 function compute_N!(par,SE)
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
     #debug -no threads
-    @threads for i in eachindex(V_ind)
+    for i in eachindex(V_ind)
+    #@threads for i in eachindex(V_ind)
         k = par.k_gr[V_ind[i][1]]
         z = par.shock_mc.state_values[V_ind[i][2]]
         SE.N[i] = min((SE.w/(par.A*z*k^par.α*par.ν))^(1/(1-par.ν)),par.Nmax)
@@ -192,16 +221,15 @@ function compute_N!(par,SE)
 end
 
 #Function update_pol! updates the policy function (and overwrites the previous one). It returns value corresponding to the stopping criterion.
-function update_pol!(par,SE)
+function update_pol!(par,SE,Vint)
     #Generate iterator (this takes almost no memory and is fast)
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
 
     #First compute the unrestricted optimal capital level. This does not depend on the current level of capital, or adjustment costs, so we only loop over the current productivity.
 
-    #Construct interpolator for the ex ante value function
-    Vint = get_Vint(par,SE.V)
-
-    @threads for z_ind=1:par.N_z
+    #debug: no threads
+    #@threads for z_ind=1:par.N_z
+    for z_ind=1:par.N_z
         #Compute optimal level of capital in the absence of adjustment costs
         #This will be saved in policy function h, value saved in E
 
@@ -211,7 +239,9 @@ function update_pol!(par,SE)
     end
 
     #parallel loop over grid points
-    @threads for i in eachindex(V_ind)
+    #debug - distable threading
+    #@threads for i in eachindex(V_ind)
+    for i in eachindex(V_ind)
         #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
 
         #index of capital is V_ind[i][1]
@@ -231,10 +261,9 @@ function update_pol!(par,SE)
         Vadj = SE.E[z_ind] + (1-par.δ)*k
 
         SE.ξc[i] = min((Vadj - Vwait)/(SE.w*SE.pd),par.ξbar)
-        #(truncate so the adjustment threshold is never greater than the maximum possible value of ξ. This is convenient so we do not have to check this when calculating expecations)
+        #truncate so the adjustment threshold is always in [0,ξbar], where ξbar is the maximum adjustment cost (this is important so that we get values of the cdf of ξ at ξc in [0,1] later)
 
-
-        #if the cutoff is negative, it means that the continuation value of waiting is greater than the value of adjusting, which should never be the case if the algorithm found the global maximum - but sometimes it can happen due to small numerical errors. In this case set the threshold to zero (so the firm does not adjust - in this case some vastly suboptimal choice may be found anyway).
+        #If the adjustment cost is negative, it means that the optimal continuation value (without paying adjustment costs) is less than the value of waiting, which should never be the case. It happens only rarely (small numerical errors).
         if(SE.ξc[i]<0.0)
             SE.ξc[i]=0.0
         end
@@ -245,11 +274,11 @@ function update_pol!(par,SE)
 end
 
 #Function get_V0 uses the policy functions and the value function contained in SE to return a new updated ex ante value function. Unlike update_pol it does not overwrite the original value function in place (due to synchronisation issues and checking convergence). A few things such as generating the iterator, interpolator, and looping, are the same as in updat_pol! and are explained there in more detail.
-function get_V0(par,SE)
+function get_V0(par,SE,Vint)
     Vnew = similar(SE.V) #initialise new value function
 
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
-    Vint = get_Vint(par,SE.V)
+
     #parallel loop over grid points
     #@threads for i in eachindex(V_ind)
     for i in eachindex(V_ind)
@@ -269,20 +298,20 @@ function get_V0(par,SE)
         Vnew[i] = (par.y(par.A,z,k,SE.N[i]))*SE.pd
 
         #=
-        Now use the facts that ξ is U[o,ξbar]. For all ξ<=ξc(k,z), the firm does not adjust, in which case the ex post value V1(k,z,ξ) does not depend on ξ, and we get that part of the expectation trivially (just a constant times G(ξc), where G is the distribution function of ξ (G(ξ) = ξ/ξbar).
+        Now use the facts that ξ is U[0,ξbar]. For all ξ>ξc(k,z), the firm does not adjust, in which case the ex post value V1(k,z,ξ) does not depend on ξ, and we get that part of the expectation trivially (just a constant times G(ξc), where G is the distribution function of ξ (G(ξ) = ξ/ξbar).
 
-        For ξ > ξc, the ex ante value does depend on ξ, but only through the adjustment cost term AC(ξ) which is a linear function so we can take an analytical expectation of this part too.
+        For ξ < ξc, the ex ante value does depend on ξ, but only through the adjustment cost term AC(ξ) which is a linear function so we can take an analytical expectation of this term.
 
 
         G = G(ξbar) is the share of firms that adjust their investment.
         =#
         G = SE.ξc[i]/par.ξbar
-        #value if not not adjusting * share of firms not adjusting
+        #value if not not adjusting * share of firms not adjusting (prob of not adjusting)
         Vnew[i] +=  (1-G)*EV(max(par.k_min,(1-par.δ)*k),z_ind,par.shock_mc.p,par.N_z,Vint)
 
         #value if adjusting excluding the terms that depends on ξ * share of firms adjusting + expeted AC(ξ) (conditional expectation)
 
-        #For unadjusted firms, do not forget that we need to addd the (1-δ) term to E to get V if adjusting.
+        #For adjusting firms, do not forget that we need to addd the (1-δ)k term to E to get Vadj as in the paper.
         Vadj = SE.E[z_ind] + (1-par.δ)*k
         Vnew[i] += G*Vadj
 
