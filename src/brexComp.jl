@@ -15,6 +15,8 @@ Steps (1) - (4) are repeated until convergence of prices or the maximum number o
 
 In principle, we just need an excess demand function (ED(prices) and could use some standard root finding algorithm, possibly using numerical derivatives. The above is standard for univariate (one price) problems in heterogenous agents models and exploits the structure of the problem. With three prices it is unclear whether it still makes sense to use this algorithm and update multiple prices in step (4), or whether it is better to use a standard root finding procedure. To begin with we follow the standard procedure but later on can switch to standard root finding to find prices such that ED(prices) = [0,0,0] approximately.
 
+#Note: When looking for stationary equilibrium we can just normalise Uc = 1 (that only matters when we have aggregate shocks so the marginal utility of consumption is different in different states)
+
 =#
 
 #Iterate over prices.
@@ -81,7 +83,7 @@ function stationary_μ!(par,SE)
 
     #Move the below to a function: sim_step()
 
-    for i = 1:1000 #iterations to update the distribution
+    for i = 1:10 #iterations to update the distribution: So far just do  a few. later implement stopping rule.
 
     #Update the distribution
     μn = update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
@@ -109,7 +111,9 @@ function update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
     P = par.shock_mc.p #frequently used
     zvals = par.shock_mc.state_values
 
-    #cycle over all points in the historgram (use @threads after debugging)
+    #!!! Issue: multithreading does not work here because different points are trying to write into the same memory address (because multiple points assign mass to the same index). For now just do it serially. But in the future might need to write something more sophisticated.
+
+    #cycle over all points in the historgram
     for i in eachindex(μ_ind)
         #index of capital is μ_ind[i][1]
         #Index of shock realisation is μ_ind[i][2]
@@ -136,21 +140,33 @@ function update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
             error("Different grids not supported yet. Generalise function prepClosePoints.")
         end
 
-        h = SE.h[z_ind] #capital choice for firm that adjust - just for debugging (we already precomputed the closest points and weights)
+        #h = SE.h[z_ind] #capital choice for firm that adjust - just for debugging (we already precomputed the closest points and weights)
+        #μn[hclose[z_ind,1],:] is the row of the distribution (associated with the capital point on the grid) which is updated.
+        #SE.μ[k_ind,z_ind] is the mass to be distributed between all points
+        #G is the share of firms that adjust
 
         #The closest grid points and weights:
-
         h1 = hclose[z_ind,1]
-        h2 = hclose[z_ind,1]
+        h2 = hclose[z_ind,2]
+        w1 = hclosew[z_ind,1]
+        w2 = hclosew[z_ind,2]
+
+        #Add mass to the first close point (index hclose[z_ind,1], weight hclosew[z_ind,1])
+        μn[hclose[z_ind,1],:] +=  SE.μ[k_ind,z_ind]*G*hclosew[z_ind,1]*P[z_ind,:]
+        #2nd point:
+        μn[hclose[z_ind,2],:] +=  SE.μ[k_ind,z_ind]*G*hclosew[z_ind,2]*P[z_ind,:]
 
 
         #(B) firms that do not adjust
-
-
-
-        #construct - weight that goes to all kpr.
+        #The same as above but the points and weights are in kdepclose, and the indexing is in terms of capital, because the "policy" depends on capital now (1-δ)k
+        μn[kdclose[k_ind,1],:] +=  SE.μ[k_ind,z_ind]*(1.0-G)*kdclosew[k_ind,1]*P[z_ind,:]
+        #2nd point:
+        μn[kdclose[k_ind,2],:] +=  SE.μ[k_ind,z_ind]*(1.0-G)*kdclosew[k_ind,2]*P[z_ind,:]
     end
 
+    #debug: print sum of the distribution
+    a = sum(μn)
+    print("debug in update_μ. sum of μ mass = $a \n")
 
     return μn
 end
@@ -163,6 +179,8 @@ function firm_solve!(par,SEn,SEg)
     #Compute the optimal labour supply (this is a static problem, depends only on prices and not on the continuation value).
     compute_N!(par,SEn)
 
+    debug = true #write messages about convergence
+
     #Value function iteration
     for VFIind = 1:par.VFI_maxiter
         Vint = get_Vint(par,SEn.V) #construct interpolator for the current value function (which is SE.V)
@@ -172,11 +190,19 @@ function firm_solve!(par,SEn,SEg)
             #SEn contains the current policy function (and value function, prices, etc.) and the policy function part will be overwritten.
             #poll_diff is the stopping criterion for policy function.
             pol_diff = update_pol!(par,SEn,Vint)
+
+            #debug: report the difference in poll_diff
+
+            if debug
+            a = pol_diff[1]
+            b = pol_diff[2]
+            print("Debug in firm_solve!. Iteration $VFIind. AAD policy difference: h = $a, ξc = $b \n")
+            end
         else
             #We do not update the policy but we still have to update the value of choosing the policy h!
             for z_ind = 1:par.N_z
-                #Value of optimal adjustment is just the expected ex ante value of choosing the optimal capital level h, minus the chosen capital level.
-                SEn.E[z_ind] = EV(SEn.h[z_ind],1,par.shock_mc.p,par.N_z,Vint) - SEn.h[z_ind]
+                #Value of optimal adjustment is just the expected discounted ex ante value of choosing the optimal capital level h, minus the chosen capital level.
+                SEn.E[z_ind] = par.β* EV(SEn.h[z_ind],1,par.shock_mc.p,par.N_z,Vint) - SEn.h[z_ind]
             end
         end
 
@@ -185,19 +211,15 @@ function firm_solve!(par,SEn,SEg)
 
         #Check stopping criteria for the value function (difference b/w Vnew and SEn.V)
 
+        if debug
         #Absolute relative difference at each grid point:
         ARD = (abs.(V_new-SEn.V)./(abs.(SEn.V) .+ 0.001))
         MARD = maximum(ARD) #maximum relative absolute deviation
         AARD = mean(ARD) #average relative absolute deviation
 
-        #Debug - checking convergence:
-        #Average absolute deviation - this also needs to converge, not just the relative one!
-        AAD = mean(abs.(V_new-SEn.V))
-        AV = mean(V_new)
-        print("Iter $VFIind, Avg. V = $AV, AAD = $AAD, AARD = $AARD \n")
+        print("Value function MARD = $MARD, AARD = $AARD \n")
+        end
 
-        #Debug only: print(the stopping criteria values)
-        #print("Iteration $VFIind: max ARD = $MARD, mean ARD = $AARD \n")
 
         #The VFI converges monotonically. Right now, the stopping rule is not checked and the maximum number of iterations is performed.
 
@@ -212,8 +234,7 @@ end #firm_solve!
 function compute_N!(par,SE)
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
     #debug -no threads
-    for i in eachindex(V_ind)
-    #@threads for i in eachindex(V_ind)
+    @threads for i in eachindex(V_ind)
         k = par.k_gr[V_ind[i][1]]
         z = par.shock_mc.state_values[V_ind[i][2]]
         SE.N[i] = min((SE.w/(par.A*z*k^par.α*par.ν))^(1/(1-par.ν)),par.Nmax)
@@ -227,21 +248,24 @@ function update_pol!(par,SE,Vint)
 
     #First compute the unrestricted optimal capital level. This does not depend on the current level of capital, or adjustment costs, so we only loop over the current productivity.
 
-    #debug: no threads
-    #@threads for z_ind=1:par.N_z
-    for z_ind=1:par.N_z
+    poldiff = [0.0,0.0] #Vector for reporting difference in the policy function (average absolute deviation in the capital and policy)
+    debug = true #locally set debug mode
+    if debug #copy policy function so we can compute differences - normally these are just overwritten in place
+        hcopy = copy(SE.h)
+        ξccopy = copy(SE.ξc)
+    end
+
+    @threads for z_ind=1:par.N_z
         #Compute optimal level of capital in the absence of adjustment costs
         #This will be saved in policy function h, value saved in E
 
-        SE.h[z_ind],SE.E[z_ind] = find_KU(z_ind,par.shock_mc.p,par.N_z,Vint,par.k_min,par.k_max)
+        SE.h[z_ind],SE.E[z_ind] = find_KU(z_ind,par.β,par.shock_mc.p,par.N_z,Vint,par.k_min,par.k_max)
 
         #Warning! - the continuation value E does not include the left-over capital (1-δ)*k. So it is not exactly Vadj as in our model notation, but more like E in KT2008 paper. In the numerical implementation it is better to add this later (otherwise we would have to keep the value function E for all k)
     end
 
-    #parallel loop over grid points
-    #debug - distable threading
-    #@threads for i in eachindex(V_ind)
-    for i in eachindex(V_ind)
+
+    @threads for i in eachindex(V_ind)
         #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
 
         #index of capital is V_ind[i][1]
@@ -263,14 +287,22 @@ function update_pol!(par,SE,Vint)
         SE.ξc[i] = min((Vadj - Vwait)/(SE.w*SE.pd),par.ξbar)
         #truncate so the adjustment threshold is always in [0,ξbar], where ξbar is the maximum adjustment cost (this is important so that we get values of the cdf of ξ at ξc in [0,1] later)
 
+        #For development only
+        #
+
         #If the adjustment cost is negative, it means that the optimal continuation value (without paying adjustment costs) is less than the value of waiting, which should never be the case. It happens only rarely (small numerical errors).
         if(SE.ξc[i]<0.0)
             SE.ξc[i]=0.0
         end
 
     end
+
+    if debug
+        #Report average absolute difference (we have a good idea of the scale, so no need to normalize).
+        poldiff = [maximum(abs.(hcopy-SE.h)),maximum(abs.(ξccopy-SE.ξc))]
+    end
     #placeholder for stopping criterion
-    return 0.0
+    return poldiff
 end
 
 #Function get_V0 uses the policy functions and the value function contained in SE to return a new updated ex ante value function. Unlike update_pol it does not overwrite the original value function in place (due to synchronisation issues and checking convergence). A few things such as generating the iterator, interpolator, and looping, are the same as in updat_pol! and are explained there in more detail.
@@ -280,8 +312,7 @@ function get_V0(par,SE,Vint)
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
 
     #parallel loop over grid points
-    #@threads for i in eachindex(V_ind)
-    for i in eachindex(V_ind)
+    @threads for i in eachindex(V_ind)
         #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
 
         #index of capital is V_ind[i][1]
@@ -306,7 +337,7 @@ function get_V0(par,SE,Vint)
         G = G(ξbar) is the share of firms that adjust their investment.
         =#
         G = SE.ξc[i]/par.ξbar
-        #value if not not adjusting * share of firms not adjusting (prob of not adjusting)
+        #value if not adjusting * share of firms not adjusting (prob of not adjusting)
         Vnew[i] +=  (1-G)*EV(max(par.k_min,(1-par.δ)*k),z_ind,par.shock_mc.p,par.N_z,Vint)
 
         #value if adjusting excluding the terms that depends on ξ * share of firms adjusting + expeted AC(ξ) (conditional expectation)
@@ -315,8 +346,11 @@ function get_V0(par,SE,Vint)
         Vadj = SE.E[z_ind] + (1-par.δ)*k
         Vnew[i] += G*Vadj
 
-        #Finally subtract the expectation of adjustment costs (remember the reduced integration interval because they are paid only if ξ > ξc
-        Vnew[i] -= ((par.ξbar^2 - SE.ξc[i]^2)/par.ξbar) * SE.w*SE.pd
+        #Subtract the expectation of adjustment costs paid, which is E(ξ|ξ<ξc) = ξc^2/(2*ξbar).
+        Vnew[i] -= (SE.ξc[i]^2)/(2.0*par.ξbar) * SE.w*SE.pd
+
+        #Multiply the value function by the marginal utility (since the value function is in terms of utils. Everything is premultiplied by this - current return, continuation value, adjustment costs).
+        Vnew[i] *= SE.Uc
 
     end
 
@@ -385,11 +419,11 @@ end
 
 #Function find_Ku find the value of capital which maximises the ex ante value function (Ku for Capital unconstrained by adjustment costs)
 #At this stage it uses a simple search algorithm withing bounds of the capital grid. The issue is that this does not use any initial guess so is not very efficient and may not be very stable either in case there are local optima (due to limitations of the Optim.jl package where univariate bounded optimisation does not use an initial guess). If this is a performance bottleneck, or if local instability is a problem, a way forward is to (1) write a wrapper function which allows evaluation of EV outside of capital grid (nearest neighbour plus a steep convex penalty function of distance from grid boundary), (2) use an unconstrained optimisation algorithm which uses an initial guess - policy function from previous iteration in VFI - and should converge faster (3) check if the optimal value falls withing boundaries and if not, use the bounded optimisation search algorithm.
-function find_KU(z_ind,P,N_z,Vint,k_min,k_max)
+function find_KU(z_ind,β,P,N_z,Vint,k_min,k_max)
     #This uses default values for algorithm settings, does not use an initial guess!
     #note -EV (because it's a minimisation function, we want to maximise)
     #Also note that this does not include the (1-δ)k term which does not depend on the choice of next-period capital and is added to the value manually outside of this function.
-    res = optimize(kpr -> -(-kpr + EV(kpr,z_ind,P,N_z,Vint)),k_min,k_max);
+    res = optimize(kpr -> -(-kpr + β*EV(kpr,z_ind,P,N_z,Vint)),k_min,k_max);
 
     #Return a pair - the optimal capital choice, and the associated maximum value
     return Optim.minimizer(res),-Optim.minimum(res) #(-1 again due to maxmin)

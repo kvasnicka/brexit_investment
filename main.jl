@@ -85,11 +85,11 @@ To do:
 - Find closest two gridpoints and the weights. Split this into two functions - because the closest gridpoints can be precomputed (they are always the same becuase we are starting on a grid and the choice is either h(z) or (1-δk).
 
 - Iterate on a SE candidate using the policy function, to get a limiting distribution of firms, given prices.
+
 - change function ED - is it actually necessary to create a copy of SEg? It doesn't seem to be an issue that it is overwritten.
 
 - in the firm problem solution (maximising value) check why there is sometimes slightly negative adjustment threshold (numerical inaccuracy or grid boundary?)
 
-- simulation - two options: manual, or construct a transition matrix, and use BLAS matrix multiplication (multithreaded, optimised). Which is faster? It might depend also on the number of iterations...
+- after finishing debugging, restore @threads macro.
 
-- check the stopping criterion in value function iteration - this will be important once we iterate over prices so the firm's problem is solved many times (for now it doesn't matter that 500 iterations are performed)
 ")

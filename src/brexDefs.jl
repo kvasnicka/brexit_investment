@@ -53,7 +53,7 @@ the parameters into variables for direct access using for example
      #depreciation
      δ::TF = 0.05
 
-     ξbar = 1.0 #maximum possible realisation of the adjustment cost (ξ is U[0,ξbar])
+     ξbar = 0.2 #maximum possible realisation of the adjustment cost (ξ is U[0,ξbar])
 
      #Nlim is the maximum labour supply (for some calibrations, we can have very high labour supply if there is almost no capital and productivity is low)
      Nmax::TF = 3.0
@@ -111,7 +111,7 @@ the parameters into variables for direct access using for example
 
      #VFI_maxiter is the maximum number of iterations in the VFI algorithm - updates of the value function using the updated policy function.
      #If Howard accelaration is used (VFI_howard = k>1), then maximisation is performed only every k-th iteration. This can speed things up quite a bit if the maximisation is a relatively expensive step in the computation.
-     VFI_maxiter::TI = 5000 #just for development - a greater value should be set (and a stopping criterion used)
+     VFI_maxiter::TI = 500 #just for development - a greater value should be set (and a stopping criterion used)
      VFI_howard::TI = 1 #Default value is 1, a value of around 20 should be reasonable.
 
  end
