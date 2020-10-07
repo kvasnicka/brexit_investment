@@ -4,9 +4,12 @@
 
 #Activate project environment and install all dependent packages.
 #(same versions as the ones used in development)
+
+#Comment this out during development (debugger is a lot faster this way)
 import Pkg
 Pkg.activate(".")
 Pkg.instantiate()
+
 #Load necessary packages
 using Optim, Parameters, QuantEcon, BenchmarkTools,JLD, Interpolations
 using .Threads #so we don't have to write Threads.@threads every time
@@ -52,11 +55,18 @@ if ((@isdefined loadData) && (@isdefined loadFolder) && loadData)
     println("Loading initial guess from folder results/$loadFolder.")
     SE = load("results/$loadFolder/SE.jld","SE")
     TP = load("results/$loadFolder/TP.jld","TP")
+    dataloaded = true
 else
     #Initialisation with default values
     SE = fill(stat_equil(N_kh = par[1].N_kh,N_k = par[1].N_k,N_z = par[1].N_z,V=log.(fillV(par[1].N_k,par[1].N_z,par[1].k_gr))),N_S);
     TP = fill(stat_equil(N_kh = par[1].N_kh,N_k = par[1].N_k,N_z = par[1].N_z),par[1].T_max,N_S);
+    dataloaded = false
 end
+
+#Test - JIT compilation accSEeleration (first call the functions with tiny arguments so the compiler precompiles functions before calling them with a large number of grid points).
+partiny = pars(N_z = 2,N_k = 2,VFI_maxiter=1,SE_maxiter=1)
+SEtiny = stat_equil(N_z=2,N_k=2,N_kh=2)
+SE_compute!(partiny,SEtiny)
 
 #************(1) Stationary equilibrium ***************
 #Compute stationary equilibria for each set of parameters.
@@ -64,11 +74,15 @@ println("Computing Stationary Equilibria...\n")
 for i=1:N_S
 println("________________________________
 Equilibrium $i out of $N_S")
-    #SE[i] is initial guess
-    SE_compute!(par[i],SE[i])
+    #SE[i] is initial guess in the first iteration. In the following iteration, the initial guess is the stationary equilibrium computed in the first call (SE[1]), unless we loaded the guess from file (which should be better)
+    if(!dataloaded)
+        SE[i] = SE_compute!(par[i],SE[i])
+    else
+        SE[i] = SE_compute!(par[i],SE[1])
+    end
 
-#During development, only compute the first stationary equilibirum.
-break
+    print("Only computing the first stationary equilibrium during development./n")
+    break
 end
 
 #************(2) Transition paths************************
@@ -82,14 +96,11 @@ saveAll(foldername,SE,TP)
 
 println("
 To do:
-- Find closest two gridpoints and the weights. Split this into two functions - because the closest gridpoints can be precomputed (they are always the same becuase we are starting on a grid and the choice is either h(z) or (1-δk).
 
-- Iterate on a SE candidate using the policy function, to get a limiting distribution of firms, given prices.
+- in the firm problem solution ξc < 0 problem. Frequently, it is optimal to never adjust. There is either a bug in passing the values of ξc (overwriting in-place issue as before, or lack of updating?). Or there is a mistake in some of the formulas. (or is the issue that the grid is not dense enough?)
 
-- change function ED - is it actually necessary to create a copy of SEg? It doesn't seem to be an issue that it is overwritten.
+- fix the bug with Uc (premultiplication of everything leads to divergence of the value function if Uc != 1.0. Only some parts should be premultiplied, probably excluding the continuation value!)
 
-- in the firm problem solution (maximising value) check why there is sometimes slightly negative adjustment threshold (numerical inaccuracy or grid boundary?)
-
-- after finishing debugging, restore @threads macro.
+- check stopping rule for policy function (so far we just perform lots of iterations which is fine but will be an issue in transition paths computation.)
 
 ")

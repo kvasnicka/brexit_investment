@@ -17,11 +17,15 @@ There are 2 groups of parameters:
 
 #(1) Parameters specific to a stationary equilibrium (aggregate state):
 
+par_comm = ""
+
+
 #Example: Set the discount factor and preferences in all states [everything else will be equal to default values]
-par_comm = "
-β = 0.9,
-χ = 2.0
-"
+#par_comm = "
+#β = 0.95,
+#χ = 2.0
+#"
+
 #=
 Example2: Leaving everything at default but changing the probability of different Brexit outcomes (first number is probability of no Brexit, probabilities have to sum to 1)
 par_comm = "

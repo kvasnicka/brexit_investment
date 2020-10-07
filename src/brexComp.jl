@@ -27,11 +27,18 @@ for SEind = 1:par.SE_maxiter
 #Later on we will use some algorithm to find a vector of prices such that the excess demands are approximately zero (market-clearing).
 #In one dimension a bisection algorithm would be a possible approach, in multiple dimensions we will need to do something more sophisticated.
 
-#Get excess demands and new stationary equilibria
+#So far we do not loop over prices to find a statoinary equilibrium with 0 excess demands, just compute the excess demands (and the new stationary equilibrium candidate - which will contain updated value functions and policy functions, but not updated prices).
+
+#Get excess demands and new stationary equilibrium
 excess,SEn = ED(par,SE)
 
+
 #Stopping rule - to be implemented. At this stage of development break after the first loop.
-println("Stopping rule in SE_compute not implemented yet, only one iteration performed.")
+println("Only one iteration in SE_compute! preformed, updating prices not implemented yet.\n")
+
+#Return the new stationary equilibrium.
+return SEn
+
 break
 
 end
@@ -41,16 +48,16 @@ end #of SE_compute!
 
 #Function ED computes the excess demands for given prices. SEg is the initial guess for a stationary equilibrium (contains value function, policy function, prices).
 #Function ED returns a pair: excess, SEn
-#where SEn is the new candidate for stationary equilibrium (prices, policy functions, etc.). This is better than simply overwriting the initial guess, especially when using a generic root finding algorithm (for some vector of prices off-equilibrium the policy functions and stationary distribution might be very far from the equilibrium one, and may be completely non-sensical so we might run into convergence problems).
+#where SEn is the new candidate for stationary equilibrium (prices, policy functions, etc.). This is safer than simply overwriting the initial guess, especially when using a generic root finding algorithm (for some vector of prices off-equilibrium the policy functions and stationary distribution might be very far from the equilibrium one, and may be completely non-sensical so we might run into convergence problems).
 
 #The prices for which we compute excess demands are part of initial guess SEg.
 #Later on we can either write a wrapper function of prices only, or include prices as explicit argument here (if using a generic root-finding algorithm).
 function ED(par,SEg)
+    SEn = copy(SEg) #Initialise the new stationary equilibrium (do not overwrite the guess)
+
     excess = [0.0,0.0,0.0] #Initialise excess demands
     #Compute the real wage (using households FOC and log linear utility) before copying new SE candidate (in any case, prices in SEn should not be used anywhere as they were not updated)
     SEg.w = par.χ/SEg.Uc
-
-    SEn = copy(SEg) #Initialise the new stationary equilibrium
 
     #Solve the firm's problem given prices (these are contained in struct SEg along with the initial guess of value and policy functions), saving the new policy functions etc. in SEn (new stationary equilibrium candidate)
     firm_solve!(par,SEn,SEg)
@@ -72,8 +79,6 @@ function stationary_μ!(par,SE)
     #Note: We use a simulation method as opposed to constructing a transition matrix and looking for a stationary distribution directly because the major part of the algorithm focuses on transition paths, where the distribution has to be updated by applying the policy function only once. In this case, it is not efficient to construct the matrix (costly) and then apply matrix multiplication, we might as well directly perform the simulation step.
 
 
-
-
     #Construct also interpolator for the adjustment cost threshold ξc (it is needed only if we are using a finer histogram than the policy function grid)
     #ξcint = get_ξcint(par,SE.ξc)
     #Pass this to the function
@@ -83,16 +88,13 @@ function stationary_μ!(par,SE)
 
     #Move the below to a function: sim_step()
 
-    for i = 1:10 #iterations to update the distribution: So far just do  a few. later implement stopping rule.
+    for i = 1:10 #iterations to update the distribution: So far just do a few. later, do a lot and implement a stopping rule.
 
     #Update the distribution
     μn = update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
 
     #Update the distribution in SE (in place). We can also check convergence criteria.
     SE.μ = copy(μn)
-
-    #Check numerical errors - does the distribution actually sum to one?
-
 
     end
 
@@ -114,7 +116,9 @@ function update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
     #!!! Issue: multithreading does not work here because different points are trying to write into the same memory address (because multiple points assign mass to the same index). For now just do it serially. But in the future might need to write something more sophisticated.
 
     #cycle over all points in the historgram
-    for i in eachindex(μ_ind)
+    #For now use at least @simd instead of threads. Once we benchmark it on a super-computer, we can see what difference @simd makes, and if it makes sense to write a proper parallel implementation (or try to fix @threads by using some lock tricks - see Julia documentation on multi-threading).
+    #We can use simd because the order of the loop does not matter, and because this is the inner-most loop.
+    @simd for i in eachindex(μ_ind)
         #index of capital is μ_ind[i][1]
         #Index of shock realisation is μ_ind[i][2]
 
@@ -129,7 +133,7 @@ function update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
         The share of firms that adjust is G(ξc) = ξc/ξbar, where ξc is the cutoff point for the current state, given by policy function ξc(k,z). All these firms choose that same capital stock. The share of firms that do not adjust is 1-G(ξc), and all these firms let capital depreciate.
 
         Because the choices of capital in the policy function h and the depreciated capital do not fall exactly on the histogram grid, we need to find the two closest points in the grid, and split the measure of firms between the two points (using a linear weighting which puts more weight on the closer grid point). Because the choices are fixed, we have precomputed the indices of grid points and the weights.
-                =#
+        =#
 
         #(A) firms that adjust
         if par.N_k == par.N_kh
@@ -165,8 +169,8 @@ function update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
     end
 
     #debug: print sum of the distribution
-    a = sum(μn)
-    print("debug in update_μ. sum of μ mass = $a \n")
+    #a = sum(μn)
+    #print("debug in update_μ. sum of μ mass = $a \n")
 
     return μn
 end
@@ -179,7 +183,7 @@ function firm_solve!(par,SEn,SEg)
     #Compute the optimal labour supply (this is a static problem, depends only on prices and not on the continuation value).
     compute_N!(par,SEn)
 
-    debug = true #write messages about convergence
+    debug = true #write messages about convergence if true
 
     #Value function iteration
     for VFIind = 1:par.VFI_maxiter
@@ -233,7 +237,6 @@ end #firm_solve!
 #Function compute_N! computes the labour supply for each point in the state space (and saves it in SE.N)
 function compute_N!(par,SE)
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
-    #debug -no threads
     @threads for i in eachindex(V_ind)
         k = par.k_gr[V_ind[i][1]]
         z = par.shock_mc.state_values[V_ind[i][2]]
@@ -249,11 +252,12 @@ function update_pol!(par,SE,Vint)
     #First compute the unrestricted optimal capital level. This does not depend on the current level of capital, or adjustment costs, so we only loop over the current productivity.
 
     poldiff = [0.0,0.0] #Vector for reporting difference in the policy function (average absolute deviation in the capital and policy)
-    debug = true #locally set debug mode
-    if debug #copy policy function so we can compute differences - normally these are just overwritten in place
-        hcopy = copy(SE.h)
-        ξccopy = copy(SE.ξc)
-    end
+
+    #Get a copy of the policy functions so we can compute difference
+    hcopy = copy(SE.h)
+    ξccopy = copy(SE.ξc)
+
+
 
     @threads for z_ind=1:par.N_z
         #Compute optimal level of capital in the absence of adjustment costs
@@ -297,10 +301,10 @@ function update_pol!(par,SE,Vint)
 
     end
 
-    if debug
-        #Report average absolute difference (we have a good idea of the scale, so no need to normalize).
-        poldiff = [maximum(abs.(hcopy-SE.h)),maximum(abs.(ξccopy-SE.ξc))]
-    end
+
+    #Return the maximum absolute deviation (relative for capital, absolute for ξc - because this is frequently close to 0)
+    poldiff = [maximum(abs.(hcopy-SE.h)./(abs.(SE.h).+0.0001 )),maximum(abs.(ξccopy-SE.ξc))]
+
     #placeholder for stopping criterion
     return poldiff
 end

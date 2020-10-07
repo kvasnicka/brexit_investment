@@ -113,7 +113,6 @@ the parameters into variables for direct access using for example
      #If Howard accelaration is used (VFI_howard = k>1), then maximisation is performed only every k-th iteration. This can speed things up quite a bit if the maximisation is a relatively expensive step in the computation.
      VFI_maxiter::TI = 500 #just for development - a greater value should be set (and a stopping criterion used)
      VFI_howard::TI = 1 #Default value is 1, a value of around 20 should be reasonable.
-
  end
 
 #mutable struct stat_equil contains everything that describes a stationary equilibrium: distribution of firms, prices, value and policy functions, etc.
@@ -156,7 +155,9 @@ the parameters into variables for direct access using for example
 end
 
 #Adding method for copying structs
-Base.copy(s::stat_equil) = stat_equil(N_kh = s.N_kh, N_z = s.N_z, μ = s.μ, V = s.V, h = s.h, ξc = s.ξc, Uc = s.Uc, Q = s.Q, pd = s.pd,w = s.w,N=s.N)
+#!!!For matrices we need to use copy, otherwise the function just creates a pointer, and the data is not copied.
+Base.copy(s::stat_equil) = stat_equil(N_kh = s.N_kh, N_z = s.N_z, μ = copy(s.μ), V = copy(s.V), h = copy(s.h), ξc = copy(s.ξc), Uc = s.Uc, Q = s.Q, pd = s.pd,w = s.w,N=copy(s.N))
+
 
 #This function performs checks of parameters
 function check_par(par,N_S)
