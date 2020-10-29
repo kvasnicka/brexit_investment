@@ -298,7 +298,6 @@ function update_pol!(par,SE,Vint)
         if(SE.ξc[i]<0.0)
             SE.ξc[i]=0.0
         end
-
     end
 
 
