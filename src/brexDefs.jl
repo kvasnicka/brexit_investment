@@ -53,7 +53,7 @@ the parameters into variables for direct access using for example
      #depreciation
      δ::TF = 0.05
 
-     ξbar = 0.2 #maximum possible realisation of the adjustment cost (ξ is U[0,ξbar])
+     ξbar = 1.0 #maximum possible realisation of the adjustment cost (ξ is U[0,ξbar])
 
      #Nlim is the maximum labour supply (for some calibrations, we can have very high labour supply if there is almost no capital and productivity is low)
      Nmax::TF = 3.0
@@ -87,9 +87,9 @@ the parameters into variables for direct access using for example
 
      ############## Solution algorithm parameters ###############
      #Grid for capital in individual firm's problem
-     N_k::TI = 20 #just for development - maybe 100 is reasonable (with cubic spline)
+     N_k::TI = 100 #just for development - maybe 100 is reasonable (with cubic spline)
      k_min::TF = 0.01 #should be > 0 (for stability)
-     k_max::TF = 20.0 #needs to be checked ex-post
+     k_max::TF = 100.0 #needs to be checked ex-post
 
      #Grid for capital of individual firm
      k_gr::StepRangeLen = range(k_min,k_max,length = N_k)

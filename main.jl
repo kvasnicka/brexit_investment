@@ -63,7 +63,7 @@ else
     dataloaded = false
 end
 
-#Test - JIT compilation accSEeleration (first call the functions with tiny arguments so the compiler precompiles functions before calling them with a large number of grid points).
+#JIT compilation acceleration (first call the functions with tiny arguments so the compiler precompiles functions). Subsequent callSEs are fast.
 partiny = pars(N_z = 2,N_k = 2,VFI_maxiter=1,SE_maxiter=1)
 SEtiny = stat_equil(N_z=2,N_k=2,N_kh=2)
 SE_compute!(partiny,SEtiny)
@@ -97,10 +97,12 @@ saveAll(foldername,SE,TP)
 println("
 To do:
 
-- in the firm problem solution ξc < 0 problem. Frequently, it is optimal to never adjust. There is either a bug in passing the values of ξc (overwriting in-place issue as before, or lack of updating?). Or there is a mistake in some of the formulas. (or is the issue that the grid is not dense enough?)
-
 - fix the bug with Uc (premultiplication of everything leads to divergence of the value function if Uc != 1.0. Only some parts should be premultiplied, probably excluding the continuation value!)
 
 - check stopping rule for policy function (so far we just perform lots of iterations which is fine but will be an issue in transition paths computation.)
+
+- during development and debugging @threads macros were commented out. Uncomment them before running the large-scale computations.
+
+- check the issue with updating value function (see Onenote note for that). Is this actually fine, or is there a logical error in the algorithm?
 
 ")

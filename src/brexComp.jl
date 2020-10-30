@@ -183,27 +183,26 @@ function firm_solve!(par,SEn,SEg)
     #Compute the optimal labour supply (this is a static problem, depends only on prices and not on the continuation value).
     compute_N!(par,SEn)
 
-    debug = true #write messages about convergence if true
+    debug = false #write messages about convergence if true
 
     #Value function iteration
     for VFIind = 1:par.VFI_maxiter
         Vint = get_Vint(par,SEn.V) #construct interpolator for the current value function (which is SE.V)
 
-        #If this is the first iteration, or if the iteration index is a multiple of VFI_howard, update the policy function.
+        #If this is the first iteration, or if the iteration index is a multiple of VFI_howard, update the policy function. The value function SE.E is updated as part of this process
         if (mod(VFIind,par.VFI_howard) == 0 || VFIind == 1)
             #SEn contains the current policy function (and value function, prices, etc.) and the policy function part will be overwritten.
             #poll_diff is the stopping criterion for policy function.
             pol_diff = update_pol!(par,SEn,Vint)
 
             #debug: report the difference in poll_diff
-
             if debug
-            a = pol_diff[1]
-            b = pol_diff[2]
-            print("Debug in firm_solve!. Iteration $VFIind. AAD policy difference: h = $a, ξc = $b \n")
+                a = pol_diff[1]
+                b = pol_diff[2]
+                print("Debug in firm_solve!. Iteration $VFIind. AAD policy difference: h = $a, ξc = $b \n")
             end
         else
-            #We do not update the policy but we still have to update the value of choosing the policy h!
+            #We do not update the policy but we still have to update the value of choosing the policy h (E).
             for z_ind = 1:par.N_z
                 #Value of optimal adjustment is just the expected discounted ex ante value of choosing the optimal capital level h, minus the chosen capital level.
                 SEn.E[z_ind] = par.β* EV(SEn.h[z_ind],1,par.shock_mc.p,par.N_z,Vint) - SEn.h[z_ind]
@@ -237,7 +236,8 @@ end #firm_solve!
 #Function compute_N! computes the labour supply for each point in the state space (and saves it in SE.N)
 function compute_N!(par,SE)
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
-    @threads for i in eachindex(V_ind)
+    #@threads
+    for i in eachindex(V_ind)
         k = par.k_gr[V_ind[i][1]]
         z = par.shock_mc.state_values[V_ind[i][2]]
         SE.N[i] = min((SE.w/(par.A*z*k^par.α*par.ν))^(1/(1-par.ν)),par.Nmax)
@@ -257,9 +257,8 @@ function update_pol!(par,SE,Vint)
     hcopy = copy(SE.h)
     ξccopy = copy(SE.ξc)
 
-
-
-    @threads for z_ind=1:par.N_z
+    #@threads commented out for debugging
+    for z_ind=1:par.N_z
         #Compute optimal level of capital in the absence of adjustment costs
         #This will be saved in policy function h, value saved in E
 
@@ -268,8 +267,8 @@ function update_pol!(par,SE,Vint)
         #Warning! - the continuation value E does not include the left-over capital (1-δ)*k. So it is not exactly Vadj as in our model notation, but more like E in KT2008 paper. In the numerical implementation it is better to add this later (otherwise we would have to keep the value function E for all k)
     end
 
-
-    @threads for i in eachindex(V_ind)
+    #@threads
+    for i in eachindex(V_ind)
         #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
 
         #index of capital is V_ind[i][1]
@@ -284,15 +283,14 @@ function update_pol!(par,SE,Vint)
 
         #value of waiting (next period capital is depreciated current capital)
         #(If the depreciated capital falls below the lowest grid point then truncate it to avoid extrapolation issues)
-        Vwait = EV(max(par.k_min,(1-par.δ)*k),z_ind,par.shock_mc.p,par.N_z,Vint)
-        #Vadj = E + (1-δ)k (E does not contains the policy)
+        #Discounted value (because in computing the optimal capital choice we work with discounted continuation value too).
+        Vwait = par.β*EV(max(par.k_min,(1-par.δ)*k),z_ind,par.shock_mc.p,par.N_z,Vint)
+        #Vadj = E + (1-δ)k (E is only the continuation value)
         Vadj = SE.E[z_ind] + (1-par.δ)*k
 
         SE.ξc[i] = min((Vadj - Vwait)/(SE.w*SE.pd),par.ξbar)
         #truncate so the adjustment threshold is always in [0,ξbar], where ξbar is the maximum adjustment cost (this is important so that we get values of the cdf of ξ at ξc in [0,1] later)
 
-        #For development only
-        #
 
         #If the adjustment cost is negative, it means that the optimal continuation value (without paying adjustment costs) is less than the value of waiting, which should never be the case. It happens only rarely (small numerical errors).
         if(SE.ξc[i]<0.0)
@@ -301,21 +299,22 @@ function update_pol!(par,SE,Vint)
     end
 
 
-    #Return the maximum absolute deviation (relative for capital, absolute for ξc - because this is frequently close to 0)
+    #Return the maximum absolute deviation (relative for capital, absolute for ξc - because this is frequently 0 - at some points it is always optimal to adjust)
     poldiff = [maximum(abs.(hcopy-SE.h)./(abs.(SE.h).+0.0001 )),maximum(abs.(ξccopy-SE.ξc))]
 
     #placeholder for stopping criterion
     return poldiff
 end
 
-#Function get_V0 uses the policy functions and the value function contained in SE to return a new updated ex ante value function. Unlike update_pol it does not overwrite the original value function in place (due to synchronisation issues and checking convergence). A few things such as generating the iterator, interpolator, and looping, are the same as in updat_pol! and are explained there in more detail.
+#Function get_V0 uses the policy functions and the value function contained in SE to return a new updated ex ante value function. Unlike update_pol it does not overwrite the original value function in place (due to synchronisation issues and checking convergence). A few things such as generating the iterator, interpolator, and looping, are the same as in update_pol! and are explained there in more detail.
 function get_V0(par,SE,Vint)
     Vnew = similar(SE.V) #initialise new value function
 
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
 
     #parallel loop over grid points
-    @threads for i in eachindex(V_ind)
+    #@threads
+    for i in eachindex(V_ind)
         #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
 
         #index of capital is V_ind[i][1]
@@ -340,19 +339,21 @@ function get_V0(par,SE,Vint)
         G = G(ξbar) is the share of firms that adjust their investment.
         =#
         G = SE.ξc[i]/par.ξbar
-        #value if not adjusting * share of firms not adjusting (prob of not adjusting)
-        Vnew[i] +=  (1-G)*EV(max(par.k_min,(1-par.δ)*k),z_ind,par.shock_mc.p,par.N_z,Vint)
+        #discounted continuation value if not adjusting * share of firms not adjusting (prob of not adjusting).
+        Vnew[i] +=  (1-G)*par.β*EV(max(par.k_min,(1-par.δ)*k),z_ind,par.shock_mc.p,par.N_z,Vint)
 
-        #value if adjusting excluding the terms that depends on ξ * share of firms adjusting + expeted AC(ξ) (conditional expectation)
+        #value if adjusting excluding the terms that depends on ξ * share of firms adjusting + expected AC(ξ) (conditional expectation)
 
-        #For adjusting firms, do not forget that we need to addd the (1-δ)k term to E to get Vadj as in the paper.
+        #For adjusting firms, do not forget that we need to addd the (1-δ)k term to E to get Vadj as in the paper. Also no discounting here, because SE.E already takes discounting into account.
+        #(1-δ)k added because SE.E is EV - k', and ((1-δ)k - k') is minus net investment.
         Vadj = SE.E[z_ind] + (1-par.δ)*k
         Vnew[i] += G*Vadj
 
-        #Subtract the expectation of adjustment costs paid, which is E(ξ|ξ<ξc) = ξc^2/(2*ξbar).
+        #Subtract the expectation of adjustment costs paid, which is E(ξ|ξ<ξc) = ξc^2/(2*ξbar). This already takes into account that firms with ξ above the threshold do not adjust.
         Vnew[i] -= (SE.ξc[i]^2)/(2.0*par.ξbar) * SE.w*SE.pd
 
         #Multiply the value function by the marginal utility (since the value function is in terms of utils. Everything is premultiplied by this - current return, continuation value, adjustment costs).
+        #This is actually incorrect - only the current value should be multiplied, not continuation value, otherwise it's no longer a contraction mapping if Uc*beta > 1.
         Vnew[i] *= SE.Uc
 
     end
