@@ -87,9 +87,9 @@ the parameters into variables for direct access using for example
 
      ############## Solution algorithm parameters ###############
      #Grid for capital in individual firm's problem
-     N_k::TI = 100 #just for development - maybe 100 is reasonable (with cubic spline)
+     N_k::TI = 200 #temporarily low in development - maybe 100 is reasonable (with cubic spline)
      k_min::TF = 0.01 #should be > 0 (for stability)
-     k_max::TF = 100.0 #needs to be checked ex-post
+     k_max::TF = 40.0 #needs to be checked ex-post
 
      #Grid for capital of individual firm
      k_gr::StepRangeLen = range(k_min,k_max,length = N_k)
@@ -101,7 +101,7 @@ the parameters into variables for direct access using for example
      k_gr_hist::StepRangeLen = range(k_min,k_max,length = N_kh)
 
      #Vint_mode determines what interpolation type is used in value function interpolation. So far implemented values are 1 (linear interpolation) and 2 (cubic spline). 1 should be more robust, 2 could result in performance gains if stable.
-     Vint_mode::TI = 1
+     Vint_mode::TI = 2
 
      #Tmax is the number of periods after which we assume that the model reaches the new stationary distribution. It is the total number of periods, not the number of periods after Brexit happens.
      T_max::TI = 100
@@ -111,7 +111,7 @@ the parameters into variables for direct access using for example
 
      #VFI_maxiter is the maximum number of iterations in the VFI algorithm - updates of the value function using the updated policy function.
      #If Howard accelaration is used (VFI_howard = k>1), then maximisation is performed only every k-th iteration. This can speed things up quite a bit if the maximisation is a relatively expensive step in the computation.
-     VFI_maxiter::TI = 500 #just for development - a greater value should be set (and a stopping criterion used)
+     VFI_maxiter::TI = 1 #just for development - a greater value should be set (and a stopping criterion used)
      VFI_howard::TI = 1 #Default value is 1, a value of around 20 should be reasonable.
  end
 

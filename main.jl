@@ -7,8 +7,10 @@
 
 #Comment this out during development (debugger is a lot faster this way)
 import Pkg
-Pkg.activate(".")
-Pkg.instantiate()
+
+#Comment this out during debugging
+#Pkg.activate(".")
+#Pkg.instantiate()
 
 #Load necessary packages
 using Optim, Parameters, QuantEcon, BenchmarkTools,JLD, Interpolations
@@ -58,7 +60,9 @@ if ((@isdefined loadData) && (@isdefined loadFolder) && loadData)
     dataloaded = true
 else
     #Initialisation with default values
+    #The value function initial guess is just log of current capital.
     SE = fill(stat_equil(N_kh = par[1].N_kh,N_k = par[1].N_k,N_z = par[1].N_z,V=log.(fillV(par[1].N_k,par[1].N_z,par[1].k_gr))),N_S);
+
     TP = fill(stat_equil(N_kh = par[1].N_kh,N_k = par[1].N_k,N_z = par[1].N_z),par[1].T_max,N_S);
     dataloaded = false
 end
@@ -87,6 +91,7 @@ end
 
 #************(2) Transition paths************************
 
+#As initial guess for value function, we should use the value functions from stationary equilibria.
 
 #************(3) Statistics, Plots*****************
 
@@ -97,12 +102,14 @@ saveAll(foldername,SE,TP)
 println("
 To do:
 
+- Finish debugging the firm's problem.
+    - already established that linear interpolation causes huge issues. Now investigate whether the cubic interpolation is enough to fix the problem (of getting stuck at a local optimum sensitive to initial guess), or whether there are some other issues (in particular - dependence on z. It looks like for higher values of z, less investment is optimal... That seems wrong but can depend on initial guess. Try different initial guesses and investigate convergence properties...)
+
 - fix the bug with Uc (premultiplication of everything leads to divergence of the value function if Uc != 1.0. Only some parts should be premultiplied, probably excluding the continuation value!)
 
 - check stopping rule for policy function (so far we just perform lots of iterations which is fine but will be an issue in transition paths computation.)
 
 - during development and debugging @threads macros were commented out. Uncomment them before running the large-scale computations.
 
-- check the issue with updating value function (see Onenote note for that). Is this actually fine, or is there a logical error in the algorithm?
 
 ")
