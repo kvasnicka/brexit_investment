@@ -132,12 +132,11 @@ To do:
 
 - fix issue with Uc (premultiplication of everything leads to divergence of the value function if Uc != 1.0. Only some parts should be premultiplied, excluding the continuation value!)
 
-- check stopping rule for policy function (so far we just perform lots of iterations which is fine but will be an issue in transition paths computation.)
+- check stopping rule for policy function (so far we just iterate many times so convergence is guaranteed but it is unnecessarily expensive)
 
 
-- Weird behaviour - h decreasing in A. This is counterintuitive, need to figure out why. Is it actually correct or is it a bug? This also explains why h is lower for higher z (individual productivity) since this enters the firm's problem the same way as A.
+- h decreasing in A. This is counterintuitive. This also explains why h is lower for higher z (individual productivity) since this enters the firm's problem the same way as A. Need to investigate this futher.
 
-- warning: maximum iterations temporarily set too low (development)
 
 - possible issue: check that the Tauchen approximation is correct (par[1].shock_mc.state_values[5]=2.0, not 1.0).
 
