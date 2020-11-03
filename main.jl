@@ -13,7 +13,7 @@ Pkg.activate(".")
 Pkg.instantiate()
 
 #Load necessary packages
-using Optim, Parameters, QuantEcon, BenchmarkTools,JLD, Interpolations
+using Optim, Parameters, QuantEcon, BenchmarkTools,JLD, Interpolations,Plots
 using .Threads #so we don't have to write Threads.@threads every time
 
 #Import the local module brexit_investment which contains all new functions, data types, etc. used in the project
@@ -91,7 +91,7 @@ Equilibrium $i out of $N_S")
         SE[i] = SE_compute!(par[i],SE[1])
     end
 
-    print("Only computing the first stationary equilibrium during development./n")
+    print("Only computing the first stationary equilibrium./n")
     break
 end
 
@@ -106,21 +106,30 @@ end
 #(The historgram plot as a sanity check)
 #range for plots (grid points indices)
 a1 = 1
-a2 = 50
-zind = 5 #index of shock for which we plot the distribution
+a2 = par[1].N_k
+zind = Int(round(par[1].N_z/2)) #index of shock for which we plot the distribution
 zval = par[1].shock_mc.state_values[zind]
-p = plot(par[1].k_gr[a1:a2],SE[1].μ[a1:a2,1],title = "μ", label = "z = $zval",lw = 2)
+p = plot(par[1].k_gr[a1:a2],SE[1].μ[a1:a2,1],title = "μ", xlabel="k", label = "z = $zval",lw = 2)
 display(p)
+savefig("$foldername/mu.pdf")
 
 #Plot of the policy function and value function
 a1 = 1
 a2 = par[1].N_k
-zind = 5 #index of shock for which we plot the distribution
+zind = Int(round(par[1].N_z/2)) #index of shock for which we plot the function
 zval = par[1].shock_mc.state_values[zind]
-pV = plot(par[1].k_gr[a1:a2],SE[1].V[a1:a2,1],title = "V", label = "z = $zval",lw = 2)
+pV = plot(par[1].k_gr[a1:a2],SE[1].V[a1:a2,1],title = "V", xlabel="k", label = "z = $zval",lw = 2)
 display(pV)
+savefig("$foldername/V.pdf")
 
 #Also plot ξc:
+a1 = 1
+a2 = par[1].N_k
+zind = Int(round(par[1].N_z/2)) #index of shock for which we plot the function
+zval = par[1].shock_mc.state_values[zind]
+pξ = plot(par[1].k_gr[a1:a2],SE[1].ξc[a1:a2,1],title = "ξ^c (investment cost threshold)", xlabel="k", label = "z = $zval",lw = 2)
+display(pξ)
+savefig("$foldername/xi.pdf")
 
 #Saving results
 #(function saveAll is defined in brexTools.jl, see there for details)
@@ -129,19 +138,6 @@ saveAll(foldername,SE,TP)
 println("
 To do:
 
-
-- fix issue with Uc (premultiplication of everything leads to divergence of the value function if Uc != 1.0. Only some parts should be premultiplied, excluding the continuation value!)
-
-- check stopping rule for policy function (so far we just iterate many times so convergence is guaranteed but it is unnecessarily expensive)
-
-
-- h decreasing in A. This is counterintuitive. This also explains why h is lower for higher z (individual productivity) since this enters the firm's problem the same way as A. Need to investigate this futher.
-
-
-- possible issue: check that the Tauchen approximation is correct (par[1].shock_mc.state_values[5]=2.0, not 1.0).
-
-- baseline.jl: contains experimental value of A.
-
- - check boundary conditions at lower end of the grid (extrapolation penalty?, no depreciation, generous bound on labour supply)
+- stopping rule for policy function (so far we just iterate many times so convergence is guaranteed but it is unnecessarily expensive)
 
 ")

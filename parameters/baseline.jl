@@ -41,9 +41,9 @@ PS = [0.0,0.5,0.5]
 
 #Example: Tarrifs before Brexit are 0, in soft Brexit they are 0.05, in hard Brexit they are 0.1. TFP is also possibly affected, but no change in the baseline..
 par_diff = [
-    "τ = 0.0,A=10.0",
-    "τ = 0.05,A=1.0",
-    "τ = 0.1,A=1.0"
+    "τ = 0.0,A=0.5",
+    "τ = 0.05,A=0.5",
+    "τ = 0.1,A=0.5"
 ]
 
 #Warning: Setting the values of some variables to be different between Brexit states will break the program - usually these are parameters related to the solution technique (see brexDefs.jl for details). In general, changing values of parameters which have economic interpretation should be fine.

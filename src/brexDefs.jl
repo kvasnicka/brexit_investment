@@ -43,7 +43,8 @@ the parameters into variables for direct access using for example
      ############### Firms ############################
      #Production function parameters
      #Intermediate goods firms
-     A::TF = 1.0 #Total Factor Productivity (WARNING: THIS IS OVERWRITTEN BY THE EXAMPLE baseline.jl parameter file)
+     A::TF = 0.5 #Total Factor Productivity (WARNING: THIS IS OVERWRITTEN BY THE EXAMPLE baseline.jl parameter file)
+
      α::TF = 0.3
      ν::TF = 0.6
      #Production function - Cobb-Douglas with decreasing returns.
@@ -55,8 +56,8 @@ the parameters into variables for direct access using for example
 
      ξbar = 1.0 #maximum possible realisation of the adjustment cost (ξ is U[0,ξbar])
 
-     #Nlim is the maximum labour supply (for some calibrations, we can have very high labour supply if there is almost no capital and productivity is low)
-     Nmax::TF = 3.0
+     #Nmax is the maximum labour demanded by firms and supplied by households. So far the bound is put at a very high level (effectively unrestricted) to avoid non-differentiabilities, and we check ex post that it is not unreasonably high.
+     Nmax::TF = 1000000.0
 
      #Production of final goods
      ϵ::TF = 0.5 #elasticity of substitution
@@ -66,7 +67,8 @@ the parameters into variables for direct access using for example
      ############## Shocks ############################
      #Idiosyncratic productivity shock
      #Productivity shock process is either AR(1) approximated by Tauchen
-     N_z::TI = 9 #number of shock realisations in approximation
+     N_z::TI = 99 #number of shock realisations in approximation
+     #(high N_z results in smooth distributions but increases computation time linearly)
      AR1_μ::TF = 1.0 #AR(1) mean
      AR1_ρ::TF = 0.5 #AR(1) autocorrelation
      AR1_σ::TF = 0.1 #std deviation of innovation
@@ -103,18 +105,18 @@ the parameters into variables for direct access using for example
      #Vint_mode determines what interpolation type is used in value function interpolation. So far implemented values are 1 (linear interpolation) and 2 (cubic spline).
      #WARNING: With linear interpolation we maximise a nondifferentiable function and the optimal choice of capital always lies on the grid (because we maximise piecewise linear function minus k'). We need a VERY fine grid, otherwise we get a poor approximation
      #Cubic spline performs vastly better!)
-     Vint_mode::TI = 2
+     Vint_mode::TI = 1
 
      #Tmax is the number of periods after which we assume that the model reaches the new stationary distribution. It is the total number of periods, not the number of periods after Brexit happens.
      T_max::TI = 100
 
      #SE_maxiter is the maximum number of iterations in finding stationary equilibrium
      #This should be a fairly large number (maybe 1-5k)
-     SE_maxiter::TI = 100
+     SE_maxiter::TI = 1000
 
      #VFI_maxiter is the maximum number of iterations in the VFI algorithm - updates of the value function using the updated policy function.
      #If Howard accelaration is used (VFI_howard = k>1), then maximisation is performed only every k-th iteration. This can speed things up quite a bit if the policy improvement step is relatively expensive.
-     VFI_maxiter::TI = 10000 #just for development - a greater value should be set (and a stopping criterion used)
+     VFI_maxiter::TI = 1000 #just for development - a greater value should be set (and a stopping criterion used)
      VFI_howard::TI = 10 #Default value is 1, a value of around 20 should be reasonable.
  end
 

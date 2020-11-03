@@ -244,7 +244,7 @@ function compute_N!(par,SE)
     @threads for i in eachindex(V_ind)
         k = par.k_gr[V_ind[i][1]]
         z = par.shock_mc.state_values[V_ind[i][2]]
-        SE.N[i] = min((SE.w/(par.A*z*k^par.α*par.ν))^(1/(1-par.ν)),par.Nmax)
+        SE.N[i] = min(((par.A*z*par.ν*k^par.α)/SE.w)^(1/(1-par.ν)),par.Nmax)
     end
 end
 
@@ -281,25 +281,30 @@ function update_pol!(par,SE,Vint)
         z_ind = V_ind[i][2]
         k = par.k_gr[k_ind]
 
-        #Compute the optimal adjustment cost threshold.
+        #Compute the optimal adjustment cost threshold:
 
-        #value of waiting (next period capital is depreciated current capital)
-        #(If the depreciated capital falls below the lowest grid point then truncate it to avoid extrapolation issues)
-        #Discounted value (because in computing the optimal capital choice we work with discounted continuation value too).
-        error("Stopping in update_pol! - need to fix a bug here - no depreciation at the first gp")
-        #How to fix this? Just add an iff condition, and set the value of waiting at the first gridpoint to be the current one minut some penalty - maybe Vwait - 1000 if we are at the first gridpoint. Or maybe set the threshold ξc equal to 1 directly...
-        #Also need to make sure that this is implemented correctly in get_V0... Need to be careful about this... (also - discounting in get_V0 - is this done properly)
-        Vwait = par.β*EV(max(par.k_min,(1-par.δ)*k),z_ind,par.shock_mc.p,par.N_z,Vint)
-        #Vadj = E + (1-δ)k (E is only the continuation value)
-        Vadj = SE.E[z_ind] + (1-par.δ)*k
+        #If the depreciated capital is less than the grid boundary, the firm is not allowed to let capital depreciate further and has to adjust to the optimal value.
+        #This avoids issues with extrapolation, and is not restrictive if the grid boundary is chosen correctly (very low level of capital which is never optimal)
+        if (1-par.δ)*k < par.k_gr[1]
+            SE.ξc[i] = 1.0 #fraction of firms that adjust is 1
+        else
+            #depreciated capital is within the grid. This is the standard case.
 
-        SE.ξc[i] = min((Vadj - Vwait)/(SE.w*SE.pd),par.ξbar)
-        #truncate so the adjustment threshold is always in [0,ξbar], where ξbar is the maximum adjustment cost (this is important so that we get values of the cdf of ξ at ξc in [0,1] later)
+            #Value of adjusting
+            #Vadj = E + (1-δ)k (E is the continuation value EV minus k')
+            Vadj = SE.E[z_ind] + (1-par.δ)*k
 
+            #Value of waiting
+            Vwait = par.β*EV((1-par.δ)*k,z_ind,par.shock_mc.p,par.N_z,Vint)
 
-        #If the adjustment cost is negative, it means that the optimal continuation value (without paying adjustment costs) is less than the value of waiting, which should never be the case. It happens only rarely (small numerical errors).
-        if(SE.ξc[i]<0.0)
-            SE.ξc[i]=0.0
+            #Adjustment cost threshold
+            SE.ξc[i] = min((Vadj - Vwait)/(SE.w*SE.pd),par.ξbar)
+            #truncate so the adjustment threshold is always in [0,ξbar], where ξbar is the maximum adjustment cost (this is important so that we get values of the cdf of ξ at ξc in [0,1] later)
+
+            #If the adjustment cost is negative, it means that the optimal continuation value (without paying adjustment costs) is less than the value of waiting, which should never be the case, but could happen due to small numerical errors. Truncate it to avoid issues when computing expectations and simulating.
+            if(SE.ξc[i]<0.0)
+                SE.ξc[i]=0.0
+            end
         end
     end
 
@@ -331,8 +336,8 @@ function get_V0(par,SE,Vint)
         z = par.shock_mc.state_values[z_ind]
 
         #Get the updated ex ante value:
-        #current return (this does not depend on ξ so no need to take expectation)
-        Vnew[i] = (par.y(par.A,z,k,SE.N[i]))*SE.pd
+        #current profit (this does not depend on ξ so no need to take expectation)
+        Vnew[i] = ((par.y(par.A,z,k,SE.N[i])) - SE.N[i]*SE.w) * SE.pd #subtract wage costs here!
 
         #=
         Now use the facts that ξ is U[0,ξbar]. For all ξ>ξc(k,z), the firm does not adjust, in which case the ex post value V1(k,z,ξ) does not depend on ξ, and we get that part of the expectation trivially (just a constant times G(ξc), where G is the distribution function of ξ (G(ξ) = ξ/ξbar).
@@ -358,10 +363,9 @@ function get_V0(par,SE,Vint)
 
         #Multiply the value function by the marginal utility (since the value function is in terms of utils. Everything is premultiplied by this - current return, continuation value, adjustment costs).
         #This is actually incorrect - only the current value should be multiplied, not continuation value, otherwise it's no longer a contraction mapping if Uc*beta > 1.
-        Vnew[i] *= SE.Uc
+        #Vnew[i] *= SE.Uc
 
     end
-
 
     return Vnew
 end
