@@ -8,9 +8,9 @@
 #Comment this out during development (debugger is a lot faster this way)
 import Pkg
 
-#Comment this out during debugging
-#Pkg.activate(".")
-#Pkg.instantiate()
+#Can comment this out during debugging to save time
+Pkg.activate(".")
+Pkg.instantiate()
 
 #Load necessary packages
 using Optim, Parameters, QuantEcon, BenchmarkTools,JLD, Interpolations
@@ -60,12 +60,18 @@ if ((@isdefined loadData) && (@isdefined loadFolder) && loadData)
     dataloaded = true
 else
     #Initialisation with default values
-    #The value function initial guess is just log of current capital.
-    SE = fill(stat_equil(N_kh = par[1].N_kh,N_k = par[1].N_k,N_z = par[1].N_z,V=log.(fillV(par[1].N_k,par[1].N_z,par[1].k_gr))),N_S);
+
+    #Initial guess for value function 0: this leads to a corner solution in the first iteration (choose capital equal to the first point on the grid). This is usually fine but may not be, depending on the optimisation subroutine that we choose.
+    #Ultimately, the initial guess does not matter (checked numerically)
+    SE = fill(stat_equil(N_kh = par[1].N_kh,N_k = par[1].N_k,N_z = par[1].N_z),N_S);
+
+    #Alternative - initial guess for value function is log of capital. This avoids the corner solution in the first iteration.
+    #SE = fill(stat_equil(N_kh = par[1].N_kh,N_k = par[1].N_k,N_z = par[1].N_z,V=log.(fillV(par[1].N_k,par[1].N_z,par[1].k_gr))),N_S);
 
     TP = fill(stat_equil(N_kh = par[1].N_kh,N_k = par[1].N_k,N_z = par[1].N_z),par[1].T_max,N_S);
     dataloaded = false
 end
+
 
 #JIT compilation acceleration (first call the functions with tiny arguments so the compiler precompiles functions). Subsequent callSEs are fast.
 partiny = pars(N_z = 2,N_k = 2,VFI_maxiter=1,SE_maxiter=1)
@@ -95,6 +101,17 @@ end
 
 #************(3) Statistics, Plots*****************
 
+#Generate a few illustrative plots
+
+#(The historgram plot as a sanity check)
+#range for plots (grid points indices)
+a1 = 1
+a2 = 50
+zind = 5 #index of shock for which we plot the distribution
+zval = par[1].shock_mc.state_values[zind]
+p = plot(par[1].k_gr[a1:a2],SE[1].μ[a1:a2,1],title = "μ", label = "z = $zval",lw = 2)
+display(p)
+
 #Saving results
 #(function saveAll is defined in brexTools.jl, see there for details)
 saveAll(foldername,SE,TP)
@@ -102,14 +119,13 @@ saveAll(foldername,SE,TP)
 println("
 To do:
 
-- Finish debugging the firm's problem.
-    - already established that linear interpolation causes huge issues. Now investigate whether the cubic interpolation is enough to fix the problem (of getting stuck at a local optimum sensitive to initial guess), or whether there are some other issues (in particular - dependence on z. It looks like for higher values of z, less investment is optimal... That seems wrong but can depend on initial guess. Try different initial guesses and investigate convergence properties...)
 
-- fix the bug with Uc (premultiplication of everything leads to divergence of the value function if Uc != 1.0. Only some parts should be premultiplied, probably excluding the continuation value!)
+- fix issue with Uc (premultiplication of everything leads to divergence of the value function if Uc != 1.0. Only some parts should be premultiplied, probably excluding the continuation value!)
 
 - check stopping rule for policy function (so far we just perform lots of iterations which is fine but will be an issue in transition paths computation.)
 
-- during development and debugging @threads macros were commented out. Uncomment them before running the large-scale computations.
+
+- Weird behaviour - h decreasing in A. This is counterintuitive, need to figure out why. Is it actually correct or is it a bug? This also explains why h is lower for higher z (individual productivity) since this enters the firm's problem the same way as A.
 
 
 ")

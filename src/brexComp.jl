@@ -88,12 +88,18 @@ function stationary_μ!(par,SE)
 
     #Move the below to a function: sim_step()
 
-    for i = 1:10 #iterations to update the distribution: So far just do a few. later, do a lot and implement a stopping rule.
+    for i = 1:par.SE_maxiter #iterations to update the distribution
 
     #Update the distribution
     μn = update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
 
+    #Check convergence criteria and update the distribution:
+
+
     #Update the distribution in SE (in place). We can also check convergence criteria.
+
+    #Checking convergence:
+
     SE.μ = copy(μn)
 
     end
@@ -212,7 +218,7 @@ function firm_solve!(par,SEn,SEg)
         #Get the new updated value function
         V_new = get_V0(par,SEn,Vint)
 
-        #Check stopping criteria for the value function (difference b/w Vnew and SEn.V)
+        #Stopping criteria for the value function (difference b/w Vnew and SEn.V)
 
         if debug
         #Absolute relative difference at each grid point:
@@ -236,8 +242,7 @@ end #firm_solve!
 #Function compute_N! computes the labour supply for each point in the state space (and saves it in SE.N)
 function compute_N!(par,SE)
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
-    #@threads
-    for i in eachindex(V_ind)
+    @threads for i in eachindex(V_ind)
         k = par.k_gr[V_ind[i][1]]
         z = par.shock_mc.state_values[V_ind[i][2]]
         SE.N[i] = min((SE.w/(par.A*z*k^par.α*par.ν))^(1/(1-par.ν)),par.Nmax)
@@ -257,8 +262,7 @@ function update_pol!(par,SE,Vint)
     hcopy = copy(SE.h)
     ξccopy = copy(SE.ξc)
 
-    #@threads commented out for debugging
-    for z_ind=1:par.N_z
+    @threads for z_ind=1:par.N_z
         #Compute optimal level of capital in the absence of adjustment costs
         #This will be saved in policy function h, value saved in E
 
@@ -267,8 +271,7 @@ function update_pol!(par,SE,Vint)
         #Warning! - the continuation value E does not include the left-over capital (1-δ)*k. So it is not exactly Vadj as in our model notation, but more like E in KT2008 paper. In the numerical implementation it is better to add this later (otherwise we would have to keep the value function E for all k)
     end
 
-    #@threads
-    for i in eachindex(V_ind)
+    @threads for i in eachindex(V_ind)
         #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
 
         #index of capital is V_ind[i][1]
@@ -313,8 +316,7 @@ function get_V0(par,SE,Vint)
     V_ind = CartesianIndices((1:par.N_k,1:par.N_z))
 
     #parallel loop over grid points
-    #@threads
-    for i in eachindex(V_ind)
+    @threads for i in eachindex(V_ind)
         #V_ind[i] contains the Cartesian index for the i-th element of the matrix, V_ind[i][j] the index for the j-th state which corresponds to the grid point.
 
         #index of capital is V_ind[i][1]
