@@ -101,8 +101,10 @@ function stationary_μ!(par,SE)
     #Checking convergence:
 
     SE.μ = copy(μn)
-
     end
+
+    #Normalise the histogram to make sure small numerical error do not accumulate and density sums to 1
+    SE.μ = SE.μ./sum(SE.μ)
 
 end #stationary_μ!
 
@@ -119,10 +121,11 @@ function update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
     P = par.shock_mc.p #frequently used
     zvals = par.shock_mc.state_values
 
-    #!!! Issue: multithreading does not work here because different points are trying to write into the same memory address (because multiple points assign mass to the same index). For now just do it serially. But in the future might need to write something more sophisticated.
-
     #cycle over all points in the historgram
-    #For now use at least @simd instead of threads. Once we benchmark it on a super-computer, we can see what difference @simd makes, and if it makes sense to write a proper parallel implementation (or try to fix @threads by using some lock tricks - see Julia documentation on multi-threading).
+
+    #!!! Issue: multithreading leads to errors because different points are trying to write into the same memory address - racing issue (multiple grid points add mass to the same gridpoint).
+
+    #For now use at least @simd instead of threads. Once we benchmark it on a super-computer, we can see what difference @simd makes, and if it makes sense to write a proper parallel implementation (or try to fix @threads by using some lock tricks, or write a proper paralel implementation - assigning weight to a local copy of a value function and adding them at the end).
     #We can use simd because the order of the loop does not matter, and because this is the inner-most loop.
     @simd for i in eachindex(μ_ind)
         #index of capital is μ_ind[i][1]
@@ -173,10 +176,6 @@ function update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
         #2nd point:
         μn[kdclose[k_ind,2],:] +=  SE.μ[k_ind,z_ind]*(1.0-G)*kdclosew[k_ind,2]*P[z_ind,:]
     end
-
-    #debug: print sum of the distribution
-    #a = sum(μn)
-    #print("debug in update_μ. sum of μ mass = $a \n")
 
     return μn
 end
@@ -497,7 +496,7 @@ function prepClosePoints(SE,par)
 
     kdclose = fill(0,par.N_k,2)
     kdclosew = zeros(par.N_k,2)
-    for k_ind = 1:par.N_k
+    @threads for k_ind = 1:par.N_k
         k = par.k_gr_hist[k_ind] #current stock
         kd = max((1-par.δ)*k,par.k_min) #depreciated capital truncated from below (so we don't fall off the grid)
         #find the closest gridpoint to next-period depreciated capital (1-δ)k

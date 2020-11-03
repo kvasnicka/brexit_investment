@@ -112,6 +112,16 @@ zval = par[1].shock_mc.state_values[zind]
 p = plot(par[1].k_gr[a1:a2],SE[1].μ[a1:a2,1],title = "μ", label = "z = $zval",lw = 2)
 display(p)
 
+#Plot of the policy function and value function
+a1 = 1
+a2 = par[1].N_k
+zind = 5 #index of shock for which we plot the distribution
+zval = par[1].shock_mc.state_values[zind]
+pV = plot(par[1].k_gr[a1:a2],SE[1].V[a1:a2,1],title = "V", label = "z = $zval",lw = 2)
+display(pV)
+
+#Also plot ξc:
+
 #Saving results
 #(function saveAll is defined in brexTools.jl, see there for details)
 saveAll(foldername,SE,TP)
@@ -127,5 +137,12 @@ To do:
 
 - Weird behaviour - h decreasing in A. This is counterintuitive, need to figure out why. Is it actually correct or is it a bug? This also explains why h is lower for higher z (individual productivity) since this enters the firm's problem the same way as A.
 
+- warning: maximum iterations temporarily set too low (development)
+
+- possible issue: check that the Tauchen approximation is correct (par[1].shock_mc.state_values[5]=2.0, not 1.0 as I expected).
+
+- baseline.jl: contains experimental value of A.
+
+ - check boundary conditions at lower end of the grid (extrapolation penalty?, no depreciation, generous bound on labour supply)
 
 ")

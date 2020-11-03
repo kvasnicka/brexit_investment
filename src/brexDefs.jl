@@ -110,11 +110,11 @@ the parameters into variables for direct access using for example
 
      #SE_maxiter is the maximum number of iterations in finding stationary equilibrium
      #This should be a fairly large number (maybe 1-5k)
-     SE_maxiter::TI = 1000
+     SE_maxiter::TI = 100
 
      #VFI_maxiter is the maximum number of iterations in the VFI algorithm - updates of the value function using the updated policy function.
      #If Howard accelaration is used (VFI_howard = k>1), then maximisation is performed only every k-th iteration. This can speed things up quite a bit if the policy improvement step is relatively expensive.
-     VFI_maxiter::TI = 1000 #just for development - a greater value should be set (and a stopping criterion used)
+     VFI_maxiter::TI = 10000 #just for development - a greater value should be set (and a stopping criterion used)
      VFI_howard::TI = 10 #Default value is 1, a value of around 20 should be reasonable.
  end
 
