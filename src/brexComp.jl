@@ -286,6 +286,9 @@ function update_pol!(par,SE,Vint)
         #value of waiting (next period capital is depreciated current capital)
         #(If the depreciated capital falls below the lowest grid point then truncate it to avoid extrapolation issues)
         #Discounted value (because in computing the optimal capital choice we work with discounted continuation value too).
+        error("Stopping in update_pol! - need to fix a bug here - no depreciation at the first gp")
+        #How to fix this? Just add an iff condition, and set the value of waiting at the first gridpoint to be the current one minut some penalty - maybe Vwait - 1000 if we are at the first gridpoint. Or maybe set the threshold ξc equal to 1 directly...
+        #Also need to make sure that this is implemented correctly in get_V0... Need to be careful about this... (also - discounting in get_V0 - is this done properly)
         Vwait = par.β*EV(max(par.k_min,(1-par.δ)*k),z_ind,par.shock_mc.p,par.N_z,Vint)
         #Vadj = E + (1-δ)k (E is only the continuation value)
         Vadj = SE.E[z_ind] + (1-par.δ)*k

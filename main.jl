@@ -130,7 +130,7 @@ println("
 To do:
 
 
-- fix issue with Uc (premultiplication of everything leads to divergence of the value function if Uc != 1.0. Only some parts should be premultiplied, probably excluding the continuation value!)
+- fix issue with Uc (premultiplication of everything leads to divergence of the value function if Uc != 1.0. Only some parts should be premultiplied, excluding the continuation value!)
 
 - check stopping rule for policy function (so far we just perform lots of iterations which is fine but will be an issue in transition paths computation.)
 
@@ -139,7 +139,7 @@ To do:
 
 - warning: maximum iterations temporarily set too low (development)
 
-- possible issue: check that the Tauchen approximation is correct (par[1].shock_mc.state_values[5]=2.0, not 1.0 as I expected).
+- possible issue: check that the Tauchen approximation is correct (par[1].shock_mc.state_values[5]=2.0, not 1.0).
 
 - baseline.jl: contains experimental value of A.
 
