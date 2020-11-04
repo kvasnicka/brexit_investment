@@ -67,7 +67,7 @@ the parameters into variables for direct access using for example
      ############## Shocks ############################
      #Idiosyncratic productivity shock
      #Productivity shock process is either AR(1) approximated by Tauchen
-     N_z::TI = 99 #number of shock realisations in approximation
+     N_z::TI = 9 #number of shock realisations in approximation
      #(high N_z results in smooth distributions but increases computation time linearly)
      AR1_μ::TF = 1.0 #AR(1) mean
      AR1_ρ::TF = 0.5 #AR(1) autocorrelation
@@ -89,7 +89,7 @@ the parameters into variables for direct access using for example
 
      ############## Solution algorithm parameters ###############
      #Grid for capital in individual firm's problem
-     N_k::TI = 200 #temporarily low in development
+     N_k::TI = 100 #temporarily low in development
      k_min::TF = 0.01 #should be > 0 (for stability)
      k_max::TF = 20.0 #needs to be checked ex-post
 
@@ -105,14 +105,14 @@ the parameters into variables for direct access using for example
      #Vint_mode determines what interpolation type is used in value function interpolation. So far implemented values are 1 (linear interpolation) and 2 (cubic spline).
      #WARNING: With linear interpolation we maximise a nondifferentiable function and the optimal choice of capital always lies on the grid (because we maximise piecewise linear function minus k'). We need a VERY fine grid, otherwise we get a poor approximation
      #Cubic spline performs vastly better!)
-     Vint_mode::TI = 1
+     Vint_mode::TI = 2
 
      #Tmax is the number of periods after which we assume that the model reaches the new stationary distribution. It is the total number of periods, not the number of periods after Brexit happens.
      T_max::TI = 100
 
      #SE_maxiter is the maximum number of iterations in finding stationary equilibrium
-     #This should be a fairly large number (maybe 1-5k)
-     SE_maxiter::TI = 1000
+     #This should be a fairly large number (maybe 1-5k), temporarily low during development
+     SE_maxiter::TI = 10
 
      #VFI_maxiter is the maximum number of iterations in the VFI algorithm - updates of the value function using the updated policy function.
      #If Howard accelaration is used (VFI_howard = k>1), then maximisation is performed only every k-th iteration. This can speed things up quite a bit if the policy improvement step is relatively expensive.

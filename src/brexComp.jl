@@ -56,6 +56,7 @@ function ED(par,SEg)
     SEn = copy(SEg) #Initialise the new stationary equilibrium (do not overwrite the guess)
 
     excess = [0.0,0.0,0.0] #Initialise excess demands
+
     #Compute the real wage (using households FOC and log linear utility) before copying new SE candidate (in any case, prices in SEn should not be used anywhere as they were not updated)
     SEg.w = par.χ/SEg.Uc
 
@@ -66,7 +67,14 @@ function ED(par,SEg)
     stationary_μ!(par,SEn)
 
 
-    #To do: compute excess demands using market clearing conditions
+    #Compute excess demands using market clearing conditions
+    #(1) Get the aggregate labour demand
+
+    ND = sum(SEn.μ .* SEn.N)
+    #This needs to be generalised for fine historgram cases. Perhaps move this to function get_Yd and compute the aggregate labour supply together with output.
+
+    #(2) Get aggregate supply of the intermediate good
+    Yd = get_Yd(par,SEn)
 
 #Return excess demands and the new candidate for stationary equilibrium
 return excess,SEn
@@ -368,6 +376,36 @@ function get_V0(par,SE,Vint)
     end
 
     return Vnew
+end
+
+#Function get_Yd computes the aggregate supply of the intermediate good
+function get_Yd(par,SE)
+    Yd = 0.0 #Initialise the sum
+
+    #iterator
+    μ_ind = CartesianIndices((1:par.N_kh,1:par.N_z))
+    #SIMD instead of hyperthreading to avoid race conditions
+    @simd for i in eachindex(μ_ind)
+        #index of capital is μ_ind[i][1]
+        #Index of shock realisation is μ_ind[i][2]
+
+        #current capital and shock realisation
+        k_ind = μ_ind[i][1]
+        z_ind = μ_ind[i][2]
+        k = par.k_gr_hist[k_ind] #histogram grid, can be finer than the grid used to solve the firms' problem.
+        z = par.shock_mc.state_values[μ_ind[i][2]]
+
+        if par.N_k == par.N_kh
+            #The histogram is as dense as the policy function grid, no interpolation needed
+
+        else
+            error("Function get_Yd needs to be generalised for N_k != N_kh")
+            #Finer histogram, we need to interpolate the policy functions
+        end
+
+    end
+
+    return Yd
 end
 
 #Function Kpol(k,δ,ξ,ξc,h) (pol for policy) takes as input the current capital stock, depreciation, adjustment cost ξ, threshold ξc, and the optimal capital in the absence of adjustment costs h, returns the actual value of next-period capital

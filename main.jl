@@ -97,7 +97,7 @@ end
 
 #************(2) Transition paths************************
 
-#As initial guess for value function, we should use the value functions from stationary equilibria.
+#As initial guess for value function, we use the value functions from stationary equilibria.
 
 #************(3) Statistics, Plots*****************
 
