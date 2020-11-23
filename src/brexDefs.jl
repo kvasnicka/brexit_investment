@@ -32,26 +32,25 @@ the parameters into variables for direct access using for example
      χ::TF = 1.0 #disutility of work (linear)
      β::TF = 0.95 #discount factor
 
-     #Very important to use parametric type TF for the anonymous function,
-     #Otherwise JIT compilation often does not work properly (huge performance drop)
-#     u::TF1 = σ == 1.0 ? (c,n) -> log(c) - χ*n : (c,n) -> (c^(1 - σ) - 1) / (1 - σ) - χ*n
-    #We assume a log linear utility function as Bloom et al, BT and others (simplifies computation a lot as real wage is then directly related to MUc and we need to iterate over one fewer price)
-     u::TF1 =  (c,n) -> log(c) - χ*n
+     #Note: It is VERY important to use parametric type TF for the anonymous function,
+     #Otherwise JIT compilation does not work properly (huge performance drop)
+     #u::TF1 = σ == 1.0 ? (c,n) -> log(c) - χ*n : (c,n) -> (c^(1 - σ) - 1) / (1 - σ) - χ*n
 
-     τ::TF = 0.0 #tarrif
+     #We assume a log linear utility function as Bloom et al, BT and others (simplifies computation a lot as real wage is then directly related to MUc and we need to iterate over one fewer price)
+     u::TF1 =  (c,n) -> log(c) - χ*n
 
      ############### Firms ############################
      #Production function parameters
      #Intermediate goods firms
-     A::TF = 0.5 #Total Factor Productivity (WARNING: THIS IS OVERWRITTEN BY THE EXAMPLE baseline.jl parameter file)
+     A::TF = 1.0 #Total Factor Productivity (WARNING: THIS IS currently OVERWRITTEN BY THE EXAMPLE baseline.jl parameter file)
 
      α::TF = 0.3
      ν::TF = 0.6
      #Production function - Cobb-Douglas with decreasing returns.
-     #A is TFP which is a constant in the baseline but it could vary later.
+     #A is TFP which is a constant in the baseline but it could vary later (effect of Brexit on productivity)
      y::TF2 = (A,z,k,n) -> A*z*k^α*n^ν
 
-     #depreciation
+     #depreciation rate
      δ::TF = 0.05
 
      ξbar = 1.0 #maximum possible realisation of the adjustment cost (ξ is U[0,ξbar])
@@ -80,7 +79,12 @@ the parameters into variables for direct access using for example
 
      #Aggregate shock
      tb::TI = 3 #period when Brexit happens (default = 3)
-     PS::Array{TF,1} = [0.0,0.5,0.5] #Probability of each Brexit outcome (aggregate shock S realisation)
+     PS::Array{TF,1} = [0.2,0.5,0.3] #Probability of each Brexit outcome (aggregate shock S realisation)
+     #(no Brexit, deal/soft Brexit, no deal/hard Brexit)
+
+     τ::TF = 0.0 #tarrif in baseline (no Brexit)
+     τD::TF = 0.05 #tariff in "deal" Brexit
+     τND::TF = 0.2 #tariff in "no deal" Brexit
 
      ########## What the program should do################
      simonly::Bool = false

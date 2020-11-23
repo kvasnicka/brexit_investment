@@ -91,8 +91,9 @@ Equilibrium $i out of $N_S")
         SE[i] = SE_compute!(par[i],SE[1])
     end
 
-    print("Only computing the first stationary equilibrium./n")
-    break
+    #In development, uncomment this to only compute one stationary equilibrium to save time
+    #print("Only computing the first stationary equilibrium./n")
+    #break
 end
 
 #************(2) Transition paths************************
@@ -101,9 +102,9 @@ end
 
 #************(3) Statistics, Plots*****************
 
-#Generate a few illustrative plots
+#Generate plots
 
-#(The historgram plot as a sanity check)
+#(The historgram plot)
 #range for plots (grid points indices)
 a1 = 1
 a2 = par[1].N_k
@@ -122,7 +123,7 @@ pV = plot(par[1].k_gr[a1:a2],SE[1].V[a1:a2,1],title = "V", xlabel="k", label = "
 display(pV)
 savefig("$foldername/V.pdf")
 
-#Also plot ξc:
+#Also plot ξc (investment cost threshold):
 a1 = 1
 a2 = par[1].N_k
 zind = Int(round(par[1].N_z/2)) #index of shock for which we plot the function
@@ -134,10 +135,3 @@ savefig("$foldername/xi.pdf")
 #Saving results
 #(function saveAll is defined in brexTools.jl, see there for details)
 saveAll(foldername,SE,TP)
-
-println("
-To do:
-
-- stopping rule for policy function (so far we just iterate many times so convergence is guaranteed but it is unnecessarily expensive)
-
-")
