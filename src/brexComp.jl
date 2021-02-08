@@ -131,7 +131,7 @@ function update_μ(par,SE,hclose,hclosew,kdclose,kdclosew)
 
     #cycle over all points in the historgram
 
-    #!!! Issue: multithreading leads to errors because different points are trying to write into the same memory address - racing issue (multiple grid points add mass to the same gridpoint).
+    #!!! Possible issue: multithreading leads to errors because different points are trying to write into the same memory address - racing issue (multiple grid points add mass to the same gridpoint).
 
     #For now use at least @simd instead of threads. Once we benchmark it on a super-computer, we can see what difference @simd makes, and if it makes sense to write a proper parallel implementation (or try to fix @threads by using some lock tricks, or write a proper paralel implementation - assigning weight to a local copy of a value function and adding them at the end).
     #We can use simd because the order of the loop does not matter, and because this is the inner-most loop.
