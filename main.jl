@@ -135,3 +135,8 @@ savefig("$foldername/xi.pdf")
 #Saving results
 #(function saveAll is defined in brexTools.jl, see there for details)
 saveAll(foldername,SE,TP)
+
+#=
+
+
+=#
